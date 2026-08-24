@@ -4,6 +4,7 @@
   "workspaces": ["apps/api", "apps/web"],
   "scripts": {
     "db:up": "docker compose up -d postgres",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "test:e2e": "npm --prefix apps/api run prisma:seed && npm --prefix e2e run test"
   }
 }
