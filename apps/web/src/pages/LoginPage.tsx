@@ -13,7 +13,7 @@ export function LoginPage() {
     try {
       await login(email);
     } catch {
-      setError('Login failed. Check your email and try again.');
+      setError(strings.loginErrorMessage);
     }
   }
 
@@ -26,7 +26,7 @@ export function LoginPage() {
           </div>
           <h1 className="font-heading text-lg font-bold uppercase tracking-wide text-ink">{strings.appName}</h1>
         </div>
-        <label htmlFor="email" className="block text-sm font-medium text-ink">Email</label>
+        <label htmlFor="email" className="block text-sm font-medium text-ink">{strings.emailLabel}</label>
         <input
           id="email"
           type="email"

@@ -18,8 +18,8 @@ export function AppHeader() {
         <span className="font-heading text-sm font-bold uppercase tracking-wide text-white">{strings.appName}</span>
       </div>
       <nav className="flex items-center gap-6" aria-label="Main">
-        <NavLink to="/" end className={navLinkClass}>Catalog</NavLink>
-        {user.role === 'CATALOG_ADMIN' && <NavLink to="/admin" className={navLinkClass}>Admin</NavLink>}
+        <NavLink to="/" end className={navLinkClass}>{strings.catalogNav}</NavLink>
+        {user.role === 'CATALOG_ADMIN' && <NavLink to="/admin" className={navLinkClass}>{strings.adminNav}</NavLink>}
         <button type="button" onClick={() => logout()} className="text-xs font-heading font-semibold uppercase tracking-wider text-white/80 hover:text-white">
           {strings.logoutButton}
         </button>
