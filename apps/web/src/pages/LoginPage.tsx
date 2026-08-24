@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { strings } from '../strings';
 
 export function LoginPage() {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -12,6 +14,7 @@ export function LoginPage() {
     setError(null);
     try {
       await login(email);
+      navigate('/', { replace: true });
     } catch {
       setError(strings.loginErrorMessage);
     }
