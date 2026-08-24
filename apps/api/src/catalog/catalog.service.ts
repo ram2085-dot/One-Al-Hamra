@@ -12,6 +12,8 @@ export class CatalogService {
         status: 'ACTIVE',
         entitlements: {
           some: {
+            // `group` intentionally omitted: ServiceEntitlement.group exists for forward compatibility,
+            // but Phase 1's User model has no `group` field, so no user can ever match a group-based entitlement yet.
             OR: [{ department: user.department }, { role: user.role }],
           },
         },
