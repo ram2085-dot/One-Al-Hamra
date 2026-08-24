@@ -19,4 +19,11 @@ export const strings = {
   loadingLabel: 'Loading…',
   categoryFilterLabel: 'Filter by category',
   categoryFilterAll: 'All',
+  categoryLabel: 'Category',
+  vendorLabel: 'Vendor',
+  supportLabel: 'Support',
+  launchButton: 'Launch',
+  describeIssueLabel: 'Describe the issue',
+  submitButton: 'Submit',
+  reportSubmittedMessage: 'Thanks — your report has been sent.',
 };

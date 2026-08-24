@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { ServiceTile, type ServiceSummary } from '../components/ServiceTile';
 import { SearchBar } from '../components/SearchBar';
@@ -7,6 +8,7 @@ import { EmptyState } from '../components/EmptyState';
 import { strings } from '../strings';
 
 export function CatalogHome() {
+  const navigate = useNavigate();
   const [allServices, setAllServices] = useState<ServiceSummary[] | null>(null);
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState<ServiceSummary[] | null>(null);
@@ -60,7 +62,7 @@ export function CatalogHome() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((s) => (
-            <ServiceTile key={s.id} service={s} isFavorite={favorites.has(s.id)} onToggleFavorite={toggleFavorite} />
+            <ServiceTile key={s.id} service={s} isFavorite={favorites.has(s.id)} onToggleFavorite={toggleFavorite} onOpen={(id) => navigate(`/services/${id}`)} />
           ))}
         </div>
       )}

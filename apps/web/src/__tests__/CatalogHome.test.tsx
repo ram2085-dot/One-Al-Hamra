@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
+import { MemoryRouter } from 'react-router-dom';
 import { CatalogHome } from '../pages/CatalogHome';
 import * as client from '../api/client';
 
@@ -8,6 +9,14 @@ const services = [
   { id: 's1', name: 'Finance Expense System', description: 'd', category: 'Finance', tags: [], launchType: 'SSO' },
   { id: 's2', name: 'Source Code Repository', description: 'd', category: 'Engineering', tags: [], launchType: 'SSO' },
 ];
+
+function renderCatalogHome() {
+  return render(
+    <MemoryRouter>
+      <CatalogHome />
+    </MemoryRouter>,
+  );
+}
 
 describe('CatalogHome', () => {
   beforeEach(() => {
@@ -21,13 +30,13 @@ describe('CatalogHome', () => {
   });
 
   it('loads and displays entitled services', async () => {
-    render(<CatalogHome />);
+    renderCatalogHome();
     await waitFor(() => expect(screen.getByText('Finance Expense System')).toBeInTheDocument());
     expect(screen.getByText('Source Code Repository')).toBeInTheDocument();
   });
 
   it('filters results as the user types in search', async () => {
-    render(<CatalogHome />);
+    renderCatalogHome();
     await waitFor(() => expect(screen.getByText('Finance Expense System')).toBeInTheDocument());
     await userEvent.type(screen.getByRole('searchbox'), 'expence');
     await waitFor(() => expect(screen.queryByText('Source Code Repository')).not.toBeInTheDocument());
@@ -35,7 +44,7 @@ describe('CatalogHome', () => {
   });
 
   it('has no accessibility violations once loaded', async () => {
-    const { container } = render(<CatalogHome />);
+    const { container } = renderCatalogHome();
     await waitFor(() => expect(screen.getByText('Finance Expense System')).toBeInTheDocument());
     expect(await axe(container)).toHaveNoViolations();
   });
