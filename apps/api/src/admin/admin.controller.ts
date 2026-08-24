@@ -1,0 +1,29 @@
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Role } from '@prisma/client';
+import { AdminService } from './admin.service';
+import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CreateServiceDto } from './dto/create-service.dto';
+import { UpdateServiceDto } from './dto/update-service.dto';
+import type { User } from '@prisma/client';
+
+@Controller('admin/services')
+@Roles(Role.CATALOG_ADMIN)
+export class AdminController {
+  constructor(private adminService: AdminService) {}
+
+  @Get()
+  async list() {
+    return this.adminService.listAll();
+  }
+
+  @Post()
+  async create(@CurrentUser() user: User, @Body() dto: CreateServiceDto) {
+    return this.adminService.createService(user.id, dto);
+  }
+
+  @Patch(':id')
+  async update(@CurrentUser() user: User, @Param('id') id: string, @Body() dto: UpdateServiceDto) {
+    return this.adminService.updateService(user.id, id, dto);
+  }
+}
