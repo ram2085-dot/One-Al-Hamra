@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { User } from '@prisma/client';
@@ -10,5 +10,10 @@ export class CatalogController {
   @Get()
   async list(@CurrentUser() user: User) {
     return this.catalogService.listForUser(user);
+  }
+
+  @Get('search')
+  async search(@CurrentUser() user: User, @Query('q') q: string) {
+    return this.catalogService.search(user, q ?? '');
   }
 }

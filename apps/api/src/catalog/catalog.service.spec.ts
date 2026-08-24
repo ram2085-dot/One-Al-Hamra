@@ -33,4 +33,13 @@ describe('CatalogService.listForUser', () => {
       }),
     );
   });
+
+  describe('CatalogService.search', () => {
+    it('returns [] for a query with no matches rather than throwing', async () => {
+      (prisma as any).$queryRaw = jest.fn().mockResolvedValue([]);
+      const user = { id: 'u1', department: 'Finance', role: 'EMPLOYEE' } as any;
+      const results = await service.search(user, 'zzzznomatch');
+      expect(results).toEqual([]);
+    });
+  });
 });
