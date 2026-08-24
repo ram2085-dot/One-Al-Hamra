@@ -42,4 +42,23 @@ describe('CatalogService.listForUser', () => {
       expect(results).toEqual([]);
     });
   });
+
+  describe('CatalogService favorites', () => {
+    it('addFavorite is idempotent (upsert, not insert)', async () => {
+      (prisma as any).favorite = { upsert: jest.fn().mockResolvedValue({}), deleteMany: jest.fn() };
+      await service.addFavorite('u1', 's1');
+      await service.addFavorite('u1', 's1');
+      expect((prisma as any).favorite.upsert).toHaveBeenCalledTimes(2);
+      expect((prisma as any).favorite.upsert).toHaveBeenCalledWith({
+        where: { userId_serviceId: { userId: 'u1', serviceId: 's1' } },
+        create: { userId: 'u1', serviceId: 's1' },
+        update: {},
+      });
+    });
+
+    it('removeFavorite does not throw when the favorite does not exist', async () => {
+      (prisma as any).favorite = { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) };
+      await expect(service.removeFavorite('u1', 's1')).resolves.not.toThrow();
+    });
+  });
 });

@@ -58,4 +58,16 @@ export class CatalogService {
     const order = new Map(ids.map((id, i) => [id, i]));
     return services.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
   }
+
+  async addFavorite(userId: string, serviceId: string) {
+    await this.prisma.favorite.upsert({
+      where: { userId_serviceId: { userId, serviceId } },
+      create: { userId, serviceId },
+      update: {},
+    });
+  }
+
+  async removeFavorite(userId: string, serviceId: string) {
+    await this.prisma.favorite.deleteMany({ where: { userId, serviceId } });
+  }
 }
