@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { LoginPage } from './pages/LoginPage';
+import { CatalogHome } from './pages/CatalogHome';
 import { AppHeader } from './components/AppHeader';
 
 function RequireAuth({ children }: { children: JSX.Element }) {
@@ -18,7 +19,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/" element={<RequireAuth><div>Catalog home placeholder — Task 14</div></RequireAuth>} />
+      <Route path="/" element={<RequireAuth><CatalogHome /></RequireAuth>} />
     </Routes>
   );
 }

@@ -16,4 +16,7 @@ export const strings = {
   adminConsoleTitle: 'Admin Console',
   emptyEntitlementsTitle: 'No services yet',
   emptyEntitlementsHint: 'Contact the help desk if you believe this is a mistake.',
+  loadingLabel: 'Loading…',
+  categoryFilterLabel: 'Filter by category',
+  categoryFilterAll: 'All',
 };
