@@ -1,0 +1,9 @@
+{
+  "name": "enterprise-launchpad",
+  "private": true,
+  "workspaces": ["apps/api", "apps/web"],
+  "scripts": {
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down"
+  }
+}
