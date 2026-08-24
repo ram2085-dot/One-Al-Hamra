@@ -2,10 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../common/prisma.service';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class CatalogService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private auditService: AuditService,
+  ) {}
 
   async listForUser(user: User) {
     return this.prisma.service.findMany({
@@ -87,5 +91,10 @@ export class CatalogService {
     await this.getDetailForUser(user, serviceId);
     // Phase 1: routed to service owner via audit trail only; no email/notification integration yet (FR-25 stub).
     return { received: true };
+  }
+
+  async recordLaunch(user: User, serviceId: string) {
+    await this.getDetailForUser(user, serviceId);
+    await this.auditService.record(user.id, 'CATALOG_LAUNCH', serviceId);
   }
 }

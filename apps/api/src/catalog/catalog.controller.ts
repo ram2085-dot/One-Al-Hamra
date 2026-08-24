@@ -28,6 +28,12 @@ export class CatalogController {
     return this.catalogService.reportIssue(user, id, dto.description);
   }
 
+  @Post(':id/launch')
+  async launch(@CurrentUser() user: User, @Param('id') id: string) {
+    await this.catalogService.recordLaunch(user, id);
+    return { ok: true };
+  }
+
   @Post(':id/favorite')
   async favorite(@CurrentUser() user: User, @Param('id') id: string) {
     await this.catalogService.addFavorite(user.id, id);

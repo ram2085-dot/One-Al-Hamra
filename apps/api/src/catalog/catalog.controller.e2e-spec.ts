@@ -105,3 +105,31 @@ describe('GET /catalog/:id and report-issue (e2e)', () => {
     expect(res.status).toBe(201);
   });
 });
+
+describe('POST /catalog/:id/launch (e2e)', () => {
+  let app: INestApplication;
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    app = moduleRef.createNestApplication();
+    app.use(cookieParser());
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    await app.init();
+  });
+
+  afterAll(() => app.close());
+
+  it('writes exactly one CATALOG_LAUNCH audit row', async () => {
+    const agent = request.agent(app.getHttpServer());
+    const login = await agent.post('/auth/login').send({ email: 'finance.employee@launchpad.local' });
+    const list = await agent.get('/catalog');
+    const service = list.body.find((s: any) => s.name === 'Finance Expense System');
+
+    const prisma = new (require('@prisma/client').PrismaClient)();
+    const before = await prisma.auditLog.count({ where: { userId: login.body.id, eventType: 'CATALOG_LAUNCH', serviceId: service.id } });
+    await agent.post(`/catalog/${service.id}/launch`).expect(201);
+    const after = await prisma.auditLog.count({ where: { userId: login.body.id, eventType: 'CATALOG_LAUNCH', serviceId: service.id } });
+    expect(after).toBe(before + 1);
+    await prisma.$disconnect();
+  });
+});
