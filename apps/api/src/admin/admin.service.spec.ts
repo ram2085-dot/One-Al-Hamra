@@ -59,4 +59,20 @@ describe('AdminService', () => {
       expect(audit.record).toHaveBeenCalledWith('admin1', 'ADMIN_CHANGE', 's1', expect.objectContaining({ action: 'remove-entitlement' }));
     });
   });
+
+  describe('AdminService aliases', () => {
+    it('addAlias creates the row and writes one ADMIN_CHANGE audit row', async () => {
+      (prisma as any).serviceAlias = { create: jest.fn().mockResolvedValue({ id: 'a1' }), delete: jest.fn() };
+      await service.addAlias('admin1', 's1', { alias: 'expenses' } as any);
+      expect((prisma as any).serviceAlias.create).toHaveBeenCalledWith({ data: { serviceId: 's1', alias: 'expenses' } });
+      expect(audit.record).toHaveBeenCalledWith('admin1', 'ADMIN_CHANGE', 's1', expect.objectContaining({ action: 'add-alias' }));
+    });
+
+    it('removeAlias deletes the row and writes one ADMIN_CHANGE audit row', async () => {
+      (prisma as any).serviceAlias = { delete: jest.fn().mockResolvedValue({}) };
+      await service.removeAlias('admin1', 's1', 'a1');
+      expect((prisma as any).serviceAlias.delete).toHaveBeenCalledWith({ where: { id: 'a1' } });
+      expect(audit.record).toHaveBeenCalledWith('admin1', 'ADMIN_CHANGE', 's1', expect.objectContaining({ action: 'remove-alias' }));
+    });
+  });
 });

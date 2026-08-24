@@ -4,6 +4,7 @@ import { AuditService } from '../audit/audit.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { EntitlementDto } from './dto/entitlement.dto';
+import { AliasDto } from './dto/alias.dto';
 
 @Injectable()
 export class AdminService {
@@ -36,5 +37,16 @@ export class AdminService {
   async removeEntitlement(actorId: string, serviceId: string, entitlementId: string) {
     await this.prisma.serviceEntitlement.delete({ where: { id: entitlementId } });
     await this.audit.record(actorId, 'ADMIN_CHANGE', serviceId, { action: 'remove-entitlement', entitlementId });
+  }
+
+  async addAlias(actorId: string, serviceId: string, dto: AliasDto) {
+    const created = await this.prisma.serviceAlias.create({ data: { serviceId, alias: dto.alias } });
+    await this.audit.record(actorId, 'ADMIN_CHANGE', serviceId, { action: 'add-alias', alias: dto.alias });
+    return created;
+  }
+
+  async removeAlias(actorId: string, serviceId: string, aliasId: string) {
+    await this.prisma.serviceAlias.delete({ where: { id: aliasId } });
+    await this.audit.record(actorId, 'ADMIN_CHANGE', serviceId, { action: 'remove-alias', aliasId });
   }
 }

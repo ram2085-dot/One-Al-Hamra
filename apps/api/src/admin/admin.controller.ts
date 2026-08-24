@@ -6,6 +6,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { EntitlementDto } from './dto/entitlement.dto';
+import { AliasDto } from './dto/alias.dto';
 import type { User } from '@prisma/client';
 
 @Controller('admin/services')
@@ -36,6 +37,17 @@ export class AdminController {
   @Delete(':id/entitlements/:entitlementId')
   async removeEntitlement(@CurrentUser() user: User, @Param('id') id: string, @Param('entitlementId') entitlementId: string) {
     await this.adminService.removeEntitlement(user.id, id, entitlementId);
+    return { ok: true };
+  }
+
+  @Post(':id/aliases')
+  async addAlias(@CurrentUser() user: User, @Param('id') id: string, @Body() dto: AliasDto) {
+    return this.adminService.addAlias(user.id, id, dto);
+  }
+
+  @Delete(':id/aliases/:aliasId')
+  async removeAlias(@CurrentUser() user: User, @Param('id') id: string, @Param('aliasId') aliasId: string) {
+    await this.adminService.removeAlias(user.id, id, aliasId);
     return { ok: true };
   }
 }
