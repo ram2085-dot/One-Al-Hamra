@@ -6,6 +6,7 @@ build/
 *.log
 .DS_Store
 .superpowers/
+.claude/
 coverage/
 playwright-report/
 test-results/
