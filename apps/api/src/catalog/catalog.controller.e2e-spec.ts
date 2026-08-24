@@ -38,6 +38,17 @@ describe('GET /catalog (e2e)', () => {
     expect(names).not.toContain('Finance Expense System');
   });
 
+  it('projects isFavorite so the catalog UI can render favorited state on first load', async () => {
+    const agent = request.agent(app.getHttpServer());
+    await agent.post('/auth/login').send({ email: 'eng.employee@launchpad.local' });
+    const res = await agent.get('/catalog');
+    // The seed favorites "Source Code Repository" for this user (see prisma/seed.ts).
+    const codeRepo = res.body.find((s: any) => s.name === 'Source Code Repository');
+    expect(codeRepo.isFavorite).toBe(true);
+    const others = res.body.filter((s: any) => s.name !== 'Source Code Repository');
+    expect(others.every((s: any) => s.isFavorite === false)).toBe(true);
+  });
+
   it('finds "Finance Expense System" via a misspelled query', async () => {
     const agent = request.agent(app.getHttpServer());
     await agent.post('/auth/login').send({ email: 'finance.employee@launchpad.local' });

@@ -3,9 +3,23 @@ import { CatalogService } from './catalog.service';
 import { PrismaService } from '../common/prisma.service';
 import { AuditService } from '../audit/audit.service';
 
+/**
+ * Minimal evaluator for the subset of Prisma `where` syntax this service emits for entitlements
+ * (AND / OR / NOT plus scalar equality). It lets the specs assert the *semantics* of the generated
+ * predicate against concrete ServiceEntitlement rows rather than only its literal shape.
+ */
+type EntitlementRow = { department: string | null; role: string | null; group: string | null };
+
+function matches(where: any, row: EntitlementRow): boolean {
+  if (Array.isArray(where.AND)) return where.AND.every((w: any) => matches(w, row));
+  if (Array.isArray(where.OR)) return where.OR.some((w: any) => matches(w, row));
+  if (where.NOT) return !matches(where.NOT, row);
+  return Object.entries(where).every(([field, value]) => (row as any)[field] === value);
+}
+
 describe('CatalogService.listForUser', () => {
   let service: CatalogService;
-  const prisma = { service: { findMany: jest.fn() } };
+  const prisma = { service: { findMany: jest.fn() }, favorite: { findMany: jest.fn() } };
   const audit = { record: jest.fn() };
 
   beforeEach(async () => {
@@ -20,7 +34,13 @@ describe('CatalogService.listForUser', () => {
     service = moduleRef.get(CatalogService);
   });
 
-  it('queries only ACTIVE services matching the user department/role/group via OR-across-entitlement-rows', async () => {
+  async function capturedEntitlementWhere(user: any) {
+    prisma.service.findMany.mockResolvedValue([]);
+    await service.listForUser(user);
+    return prisma.service.findMany.mock.calls[0][0].where.entitlements.some;
+  }
+
+  it('queries only ACTIVE services, OR-ing across entitlement rows and AND-ing the fields within a row (spec §6)', async () => {
     const user = { id: 'u1', department: 'Finance', role: 'EMPLOYEE' } as any;
     prisma.service.findMany.mockResolvedValue([]);
 
@@ -32,12 +52,49 @@ describe('CatalogService.listForUser', () => {
           status: 'ACTIVE',
           entitlements: {
             some: {
-              OR: [{ department: 'Finance' }, { role: 'EMPLOYEE' }],
+              AND: [
+                { OR: [{ department: null }, { department: 'Finance' }] },
+                { OR: [{ role: null }, { role: 'EMPLOYEE' }] },
+                { group: null },
+                { NOT: { AND: [{ department: null }, { role: null }, { group: null }] } },
+              ],
             },
           },
         },
       }),
     );
+  });
+
+  it('does NOT match a department+role row when only the department matches (AND within a row)', async () => {
+    const user = { id: 'u1', department: 'Finance', role: 'EMPLOYEE' } as any;
+    const where = await capturedEntitlementWhere(user);
+
+    // "Finance service owners only" — must not be visible to an ordinary Finance employee.
+    expect(matches(where, { department: 'Finance', role: 'SERVICE_OWNER', group: null })).toBe(false);
+    // ...nor to a SERVICE_OWNER in another department (covered by the department half).
+    expect(matches(where, { department: 'Engineering', role: 'EMPLOYEE', group: null })).toBe(false);
+    // A row scoped to exactly this user's department+role does match.
+    expect(matches(where, { department: 'Finance', role: 'EMPLOYEE', group: null })).toBe(true);
+    // Single-field rows still act as wildcards on the unset dimension.
+    expect(matches(where, { department: 'Finance', role: null, group: null })).toBe(true);
+    expect(matches(where, { department: null, role: 'EMPLOYEE', group: null })).toBe(true);
+    // An all-null row must not become a match-everyone wildcard.
+    expect(matches(where, { department: null, role: null, group: null })).toBe(false);
+    // Phase 1 has no User.group, so a group-scoped row is unmatchable.
+    expect(matches(where, { department: 'Finance', role: null, group: 'finance-admins' })).toBe(false);
+  });
+
+  it('projects isFavorite onto each returned service', async () => {
+    const user = { id: 'u1', department: 'Finance', role: 'EMPLOYEE' } as any;
+    prisma.service.findMany.mockResolvedValue([{ id: 's1', name: 'A' }, { id: 's2', name: 'B' }]);
+    prisma.favorite.findMany.mockResolvedValue([{ serviceId: 's2' }]);
+
+    const result = await service.listForUser(user);
+
+    expect(result).toEqual([
+      { id: 's1', name: 'A', isFavorite: false },
+      { id: 's2', name: 'B', isFavorite: true },
+    ]);
   });
 
   describe('CatalogService.search', () => {

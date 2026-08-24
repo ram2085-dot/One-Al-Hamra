@@ -26,4 +26,23 @@ describe('AuthGuard (e2e)', () => {
       .send({ email: 'admin@launchpad.local' });
     expect(res.status).toBe(200);
   });
+
+  it('GET /auth/me returns the safe user projection for a live session', async () => {
+    const agent = request.agent(app.getHttpServer());
+    await agent.post('/auth/login').send({ email: 'finance.employee@launchpad.local' });
+    const res = await agent.get('/auth/me');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      id: expect.any(String),
+      email: 'finance.employee@launchpad.local',
+      displayName: 'Finn Ance',
+      department: 'Finance',
+      role: 'EMPLOYEE',
+    });
+    expect(res.body.adUsername).toBeUndefined();
+  });
+
+  it('GET /auth/me 401s without a session cookie (the logged-out case the client expects)', async () => {
+    await request(app.getHttpServer()).get('/auth/me').expect(401);
+  });
 });

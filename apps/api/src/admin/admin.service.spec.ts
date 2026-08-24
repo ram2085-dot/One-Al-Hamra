@@ -1,4 +1,6 @@
 import { Test } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { AdminService } from './admin.service';
 import { PrismaService } from '../common/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -58,6 +60,18 @@ describe('AdminService', () => {
       expect((prisma as any).serviceEntitlement.delete).toHaveBeenCalledWith({ where: { id: 'e1' } });
       expect(audit.record).toHaveBeenCalledWith('admin1', 'ADMIN_CHANGE', 's1', expect.objectContaining({ action: 'remove-entitlement' }));
     });
+
+    it('removeEntitlement raises NotFoundException (not a 500) when the row does not exist', async () => {
+      (prisma as any).serviceEntitlement = { delete: jest.fn().mockRejectedValue(recordNotFoundError()) };
+      await expect(service.removeEntitlement('admin1', 's1', 'missing')).rejects.toBeInstanceOf(NotFoundException);
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it('removeEntitlement lets non-P2025 errors propagate unchanged', async () => {
+      const boom = new Error('connection reset');
+      (prisma as any).serviceEntitlement = { delete: jest.fn().mockRejectedValue(boom) };
+      await expect(service.removeEntitlement('admin1', 's1', 'e1')).rejects.toBe(boom);
+    });
   });
 
   describe('AdminService aliases', () => {
@@ -74,5 +88,19 @@ describe('AdminService', () => {
       expect((prisma as any).serviceAlias.delete).toHaveBeenCalledWith({ where: { id: 'a1' } });
       expect(audit.record).toHaveBeenCalledWith('admin1', 'ADMIN_CHANGE', 's1', expect.objectContaining({ action: 'remove-alias' }));
     });
+
+    it('removeAlias raises NotFoundException (not a 500) when the row does not exist', async () => {
+      (prisma as any).serviceAlias = { delete: jest.fn().mockRejectedValue(recordNotFoundError()) };
+      await expect(service.removeAlias('admin1', 's1', 'missing')).rejects.toBeInstanceOf(NotFoundException);
+      expect(audit.record).not.toHaveBeenCalled();
+    });
   });
 });
+
+/** The error Prisma throws when `delete` targets a row that is not there. */
+function recordNotFoundError() {
+  return new Prisma.PrismaClientKnownRequestError('Record to delete does not exist.', {
+    code: 'P2025',
+    clientVersion: '5.10.0',
+  });
+}
