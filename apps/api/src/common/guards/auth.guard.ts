@@ -1,9 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, SetMetadata, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthService } from '../../auth/auth.service';
 
 export const PUBLIC_KEY = 'isPublic';
-export const Public = () => Reflect.metadata(PUBLIC_KEY, true);
+export const Public = () => SetMetadata(PUBLIC_KEY, true);
 
 @Injectable()
 export class AuthGuard implements CanActivate {
