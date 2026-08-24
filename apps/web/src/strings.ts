@@ -1,0 +1,15 @@
+export const strings = {
+  appName: 'Enterprise Launchpad',
+  loginPrompt: 'Sign in to continue',
+  loginButton: 'Sign in',
+  logoutButton: 'Sign out',
+  searchPlaceholder: 'Search services…',
+  noResultsTitle: "We couldn't find that service.",
+  noResultsHint: 'Try browsing a category, or contact the help desk.',
+  favoriteAdd: 'Add to favorites',
+  favoriteRemove: 'Remove from favorites',
+  reportIssue: 'Report an issue',
+  adminConsoleTitle: 'Admin Console',
+  emptyEntitlementsTitle: 'No services yet',
+  emptyEntitlementsHint: 'Contact the help desk if you believe this is a mistake.',
+};
