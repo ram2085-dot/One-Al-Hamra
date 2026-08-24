@@ -44,10 +44,15 @@ export function AdminConsole() {
                 <td>{s.category}</td>
                 <td>{s.status}</td>
                 <td className="space-x-2">
-                  {s.status === 'ACTIVE' && <button type="button" onClick={() => setStatus(s.id, 'INACTIVE')}>{strings.deactivateButton}</button>}
-                  {s.status === 'INACTIVE' && <button type="button" onClick={() => setStatus(s.id, 'ACTIVE')}>{strings.activateButton}</button>}
-                  {s.status !== 'RETIRED' && <button type="button" onClick={() => setStatus(s.id, 'RETIRED')}>{strings.retireButton}</button>}
-                  <button type="button" onClick={() => setExpanded(expanded === s.id ? null : s.id)}>
+                  {s.status === 'ACTIVE' && <button type="button" onClick={() => setStatus(s.id, 'INACTIVE')} aria-label={`${strings.deactivateButton} ${s.name}`}>{strings.deactivateButton}</button>}
+                  {s.status === 'INACTIVE' && <button type="button" onClick={() => setStatus(s.id, 'ACTIVE')} aria-label={`${strings.activateButton} ${s.name}`}>{strings.activateButton}</button>}
+                  {s.status !== 'RETIRED' && <button type="button" onClick={() => setStatus(s.id, 'RETIRED')} aria-label={`${strings.retireButton} ${s.name}`}>{strings.retireButton}</button>}
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(expanded === s.id ? null : s.id)}
+                    aria-label={`${expanded === s.id ? strings.hideButton : strings.manageEntitlementsAliasesButton} ${s.name}`}
+                    aria-expanded={expanded === s.id}
+                  >
                     {expanded === s.id ? strings.hideButton : strings.manageEntitlementsAliasesButton}
                   </button>
                 </td>
