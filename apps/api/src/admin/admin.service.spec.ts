@@ -43,4 +43,20 @@ describe('AdminService', () => {
     expect(audit.record).toHaveBeenCalledTimes(1);
     expect(audit.record).toHaveBeenCalledWith('admin1', 'ADMIN_CHANGE', 's1', expect.objectContaining({ action: 'update' }));
   });
+
+  describe('AdminService entitlements', () => {
+    it('addEntitlement creates the row and writes one ADMIN_CHANGE audit row', async () => {
+      (prisma as any).serviceEntitlement = { create: jest.fn().mockResolvedValue({ id: 'e1' }), delete: jest.fn() };
+      await service.addEntitlement('admin1', 's1', { department: 'Finance' } as any);
+      expect((prisma as any).serviceEntitlement.create).toHaveBeenCalledWith({ data: { serviceId: 's1', department: 'Finance', role: undefined, group: undefined } });
+      expect(audit.record).toHaveBeenCalledWith('admin1', 'ADMIN_CHANGE', 's1', expect.objectContaining({ action: 'add-entitlement' }));
+    });
+
+    it('removeEntitlement deletes the row and writes one ADMIN_CHANGE audit row', async () => {
+      (prisma as any).serviceEntitlement = { delete: jest.fn().mockResolvedValue({}) };
+      await service.removeEntitlement('admin1', 's1', 'e1');
+      expect((prisma as any).serviceEntitlement.delete).toHaveBeenCalledWith({ where: { id: 'e1' } });
+      expect(audit.record).toHaveBeenCalledWith('admin1', 'ADMIN_CHANGE', 's1', expect.objectContaining({ action: 'remove-entitlement' }));
+    });
+  });
 });

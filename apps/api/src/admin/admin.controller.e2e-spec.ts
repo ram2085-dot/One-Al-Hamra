@@ -45,3 +45,37 @@ describe('/admin/services RBAC (e2e)', () => {
     await prisma.$disconnect();
   });
 });
+
+describe('entitlement changes propagate immediately', () => {
+  let app: INestApplication;
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    app = moduleRef.createNestApplication();
+    app.use(cookieParser());
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    await app.init();
+  });
+
+  afterAll(() => app.close());
+
+  it('a newly entitled user sees the service in /catalog without any restart', async () => {
+    const adminAgent = request.agent(app.getHttpServer());
+    await adminAgent.post('/auth/login').send({ email: 'admin@launchpad.local' });
+    const created = await adminAgent.post('/admin/services').send({
+      name: 'Propagation Test Svc', description: 'd', category: 'IT', tags: [],
+      ownerId: (await adminAgent.post('/auth/login').send({ email: 'admin@launchpad.local' })).body.id,
+      launchType: 'SSO', supportContact: 'x@y.com',
+    });
+
+    const engAgent = request.agent(app.getHttpServer());
+    await engAgent.post('/auth/login').send({ email: 'eng.employee@launchpad.local' });
+    const before = await engAgent.get('/catalog');
+    expect(before.body.map((s: any) => s.name)).not.toContain('Propagation Test Svc');
+
+    await adminAgent.post(`/admin/services/${created.body.id}/entitlements`).send({ department: 'Engineering' }).expect(201);
+
+    const after = await engAgent.get('/catalog');
+    expect(after.body.map((s: any) => s.name)).toContain('Propagation Test Svc');
+  });
+});
