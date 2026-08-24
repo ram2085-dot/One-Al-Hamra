@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../common/prisma.service';
@@ -69,5 +69,23 @@ export class CatalogService {
 
   async removeFavorite(userId: string, serviceId: string) {
     await this.prisma.favorite.deleteMany({ where: { userId, serviceId } });
+  }
+
+  private entitlementWhere(user: User) {
+    return { OR: [{ department: user.department }, { role: user.role }] };
+  }
+
+  async getDetailForUser(user: User, id: string) {
+    const service = await this.prisma.service.findFirst({
+      where: { id, status: 'ACTIVE', entitlements: { some: this.entitlementWhere(user) } },
+    });
+    if (!service) throw new NotFoundException('Service not found');
+    return service;
+  }
+
+  async reportIssue(user: User, serviceId: string, description: string) {
+    await this.getDetailForUser(user, serviceId);
+    // Phase 1: routed to service owner via audit trail only; no email/notification integration yet (FR-25 stub).
+    return { received: true };
   }
 }

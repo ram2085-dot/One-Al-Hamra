@@ -61,3 +61,47 @@ describe('GET /catalog (e2e)', () => {
     expect(res.body).toEqual([]);
   });
 });
+
+describe('GET /catalog/:id and report-issue (e2e)', () => {
+  let app: INestApplication;
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    app = moduleRef.createNestApplication();
+    app.use(cookieParser());
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    await app.init();
+  });
+
+  afterAll(() => app.close());
+
+  it('returns detail for an entitled service', async () => {
+    const agent = request.agent(app.getHttpServer());
+    await agent.post('/auth/login').send({ email: 'finance.employee@launchpad.local' });
+    const list = await agent.get('/catalog');
+    const expenseService = list.body.find((s: any) => s.name === 'Finance Expense System');
+    const res = await agent.get(`/catalog/${expenseService.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe('Finance Expense System');
+  });
+
+  it('404s for a service the user is not entitled to (does not leak existence via 403)', async () => {
+    const financeAgent = request.agent(app.getHttpServer());
+    await financeAgent.post('/auth/login').send({ email: 'finance.employee@launchpad.local' });
+    const engAgent = request.agent(app.getHttpServer());
+    await engAgent.post('/auth/login').send({ email: 'eng.employee@launchpad.local' });
+    const engList = await engAgent.get('/catalog');
+    const codeRepo = engList.body.find((s: any) => s.name === 'Source Code Repository');
+    const res = await financeAgent.get(`/catalog/${codeRepo.id}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('accepts a report-issue submission', async () => {
+    const agent = request.agent(app.getHttpServer());
+    await agent.post('/auth/login').send({ email: 'finance.employee@launchpad.local' });
+    const list = await agent.get('/catalog');
+    const expenseService = list.body.find((s: any) => s.name === 'Finance Expense System');
+    const res = await agent.post(`/catalog/${expenseService.id}/report-issue`).send({ description: 'Login link is broken.' });
+    expect(res.status).toBe(201);
+  });
+});
