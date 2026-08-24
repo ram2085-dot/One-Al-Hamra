@@ -7,9 +7,10 @@
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
     "outDir": "./dist",
+    "rootDir": "./src",
     "baseUrl": "./",
     "sourceMap": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*", "prisma/seed.ts"]
+  "include": ["src/**/*"]
 }
