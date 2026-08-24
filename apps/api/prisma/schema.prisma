@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  EMPLOYEE
+  SERVICE_OWNER
+  CATALOG_ADMIN
+  HELP_DESK
+  SECURITY_ADMIN
+}
+
+enum LaunchType {
+  SSO
+  CREDENTIAL
+}
+
+enum ServiceStatus {
+  ACTIVE
+  INACTIVE
+  RETIRED
+}
+
+model User {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  displayName    String
+  department     String
+  role           Role      @default(EMPLOYEE)
+  adUsername     String    @unique
+  createdAt      DateTime  @default(now())
+  ownedServices  Service[] @relation("ServiceOwner")
+  favorites      Favorite[]
+}
+
+model Service {
+  id             String               @id @default(uuid())
+  name           String
+  description    String
+  logoUrl        String?
+  category       String
+  tags           String[]
+  vendorName     String?
+  ownerId        String
+  owner          User                 @relation("ServiceOwner", fields: [ownerId], references: [id])
+  launchType     LaunchType           @default(SSO)
+  status         ServiceStatus        @default(ACTIVE)
+  supportContact String
+  docsUrl        String?
+  healthCheckUrl String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  aliases        ServiceAlias[]
+  entitlements   ServiceEntitlement[]
+  favorites      Favorite[]
+}
+
+model ServiceAlias {
+  id        String  @id @default(uuid())
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  alias     String
+
+  @@index([serviceId])
+}
+
+model ServiceEntitlement {
+  id         String  @id @default(uuid())
+  serviceId  String
+  service    Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  department String?
+  role       Role?
+  group      String?
+
+  @@index([serviceId])
+}
+
+model Favorite {
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([userId, serviceId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  eventType String
+  serviceId String?
+  timestamp DateTime @default(now())
+  metadata  Json?
+
+  @@index([userId])
+  @@index([serviceId])
+}
