@@ -26,4 +26,8 @@ export const strings = {
   describeIssueLabel: 'Describe the issue',
   submitButton: 'Submit',
   reportSubmittedMessage: 'Thanks — your report has been sent.',
+  browseCategoryLabel: 'Browse a category:',
+  requestServiceButton: 'Request a new service',
+  stillStuckPrefix: 'Still stuck? Contact the',
+  helpDeskLinkText: 'help desk',
 };
