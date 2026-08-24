@@ -11,7 +11,7 @@ test('admin creates a service and entitlement; it appears for the entitled user 
   await adminPage.goto('/login');
   await adminPage.getByLabel('Email').fill('admin@launchpad.local');
   await adminPage.getByRole('button', { name: /sign in/i }).click();
-  await adminPage.goto('/admin');
+  await adminPage.getByRole('link', { name: /admin/i }).click();
   await adminPage.getByLabel('Name').fill('E2E New Service');
   await adminPage.getByLabel('Category').fill('IT');
   await adminPage.getByLabel('Description').fill('Created by e2e test');
@@ -33,7 +33,7 @@ test('retiring a service removes it from the catalog but not from admin history'
   await page.goto('/login');
   await page.getByLabel('Email').fill('admin@launchpad.local');
   await page.getByRole('button', { name: /sign in/i }).click();
-  await page.goto('/admin');
+  await page.getByRole('link', { name: /admin/i }).click();
   const row = page.getByText('Finance Expense System').locator('..');
   await row.getByRole('button', { name: /retire/i }).click();
   await expect(page.getByText('Finance Expense System')).toBeVisible(); // still in admin console
