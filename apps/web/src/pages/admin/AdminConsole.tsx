@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { apiClient } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { ServiceForm } from './ServiceForm';
-import { EntitlementEditor } from './EntitlementEditor';
-import { AliasEditor } from './AliasEditor';
+import { EntitlementEditor, type AdminEntitlement } from './EntitlementEditor';
+import { AliasEditor, type AdminAlias } from './AliasEditor';
 import { strings } from '../../strings';
 
 interface AdminService {
   id: string; name: string; category: string; status: 'ACTIVE' | 'INACTIVE' | 'RETIRED';
+  entitlements?: AdminEntitlement[];
+  aliases?: AdminAlias[];
 }
 
 export function AdminConsole() {
@@ -60,8 +62,8 @@ export function AdminConsole() {
               {expanded === s.id && (
                 <tr key={`${s.id}-editors`}>
                   <td colSpan={4} className="space-y-2 bg-gray-50 p-3">
-                    <EntitlementEditor serviceId={s.id} />
-                    <AliasEditor serviceId={s.id} />
+                    <EntitlementEditor serviceId={s.id} entitlements={s.entitlements} onChanged={reload} />
+                    <AliasEditor serviceId={s.id} aliases={s.aliases} onChanged={reload} />
                   </td>
                 </tr>
               )}

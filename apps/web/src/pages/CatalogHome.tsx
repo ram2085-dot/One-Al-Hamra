@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { ServiceTile, type ServiceSummary } from '../components/ServiceTile';
 import { SearchBar } from '../components/SearchBar';
 import { CategoryFilter } from '../components/CategoryFilter';
 import { EmptyState } from '../components/EmptyState';
+import { ErrorState } from '../components/ErrorState';
 import { strings } from '../strings';
 
 export function CatalogHome() {
@@ -14,10 +15,41 @@ export function CatalogHome() {
   const [searchResults, setSearchResults] = useState<ServiceSummary[] | null>(null);
   const [category, setCategory] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  /**
+   * Search responses carry `isFavorite` too, but they are a partial view, so they may only ADD to
+   * the set — never remove — or they would clobber an optimistic toggle made since the page loaded.
+   * The authoritative full seed comes from the `/catalog` load below.
+   */
+  const rememberFavorites = useCallback((services: ServiceSummary[]) => {
+    setFavorites((current) => {
+      const next = new Set(current);
+      for (const s of services) if (s.isFavorite) next.add(s.id);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
-    apiClient.get<ServiceSummary[]>('/catalog').then(setAllServices);
-  }, []);
+    let cancelled = false;
+    setLoadFailed(false);
+    apiClient
+      .get<ServiceSummary[]>('/catalog')
+      .then((services) => {
+        if (cancelled) return;
+        // Without this the stars always render unfilled on load, and the first click on an
+        // already-favorited service would take the "add" branch instead of "remove".
+        setFavorites(new Set(services.filter((s) => s.isFavorite).map((s) => s.id)));
+        setAllServices(services);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
 
   useEffect(() => {
     if (!query.trim()) {
@@ -25,27 +57,42 @@ export function CatalogHome() {
       return;
     }
     const handle = setTimeout(() => {
-      apiClient.get<ServiceSummary[]>(`/catalog/search?q=${encodeURIComponent(query)}`).then(setSearchResults);
+      apiClient
+        .get<ServiceSummary[]>(`/catalog/search?q=${encodeURIComponent(query)}`)
+        .then((results) => {
+          rememberFavorites(results);
+          setSearchResults(results);
+        })
+        .catch(() => setSearchResults([]));
     }, 250);
     return () => clearTimeout(handle);
-  }, [query]);
+  }, [query, rememberFavorites]);
 
   const baseList = searchResults ?? allServices ?? [];
   const categories = useMemo(() => [...new Set((allServices ?? []).map((s) => s.category))], [allServices]);
   const visible = category ? baseList.filter((s) => s.category === category) : baseList;
 
   async function toggleFavorite(id: string) {
+    const wasFavorite = favorites.has(id);
     const next = new Set(favorites);
-    if (next.has(id)) {
-      next.delete(id);
-      await apiClient.delete(`/catalog/${id}/favorite`);
-    } else {
-      next.add(id);
-      await apiClient.post(`/catalog/${id}/favorite`);
-    }
+    if (wasFavorite) next.delete(id);
+    else next.add(id);
     setFavorites(next);
+    try {
+      if (wasFavorite) await apiClient.delete(`/catalog/${id}/favorite`);
+      else await apiClient.post(`/catalog/${id}/favorite`);
+    } catch {
+      // Roll the star back so it never shows a state the server did not accept.
+      setFavorites((current) => {
+        const reverted = new Set(current);
+        if (wasFavorite) reverted.add(id);
+        else reverted.delete(id);
+        return reverted;
+      });
+    }
   }
 
+  if (loadFailed) return <ErrorState onRetry={() => setReloadKey((k) => k + 1)} />;
   if (allServices === null) return <p role="status">{strings.loadingLabel}</p>;
 
   if (allServices.length === 0) {

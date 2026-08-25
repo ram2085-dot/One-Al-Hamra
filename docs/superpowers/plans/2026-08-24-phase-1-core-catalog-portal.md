@@ -288,13 +288,16 @@ module.exports = {
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
     "outDir": "./dist",
+    "rootDir": "./src",
     "baseUrl": "./",
     "sourceMap": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*", "prisma/seed.ts"]
+  "include": ["src/**/*"]
 }
 ```
+
+`rootDir` is set explicitly (and `prisma/seed.ts` is dropped from `include`) so `tsc`'s build output lands flat at `dist/main.js` — without it, since `include` would otherwise span two top-level directories (`src/` and `prisma/`), TypeScript infers `rootDir` as their common ancestor (the package root) and mirrors that structure into `dist/`, producing `dist/src/main.js` instead. Task 20's Docker `CMD` runs `node dist/main.js`, so this must resolve correctly. The seed script is unaffected — it's run via `ts-node prisma/seed.ts` directly, which respects this tsconfig's compiler options without needing `prisma/seed.ts` in `include`.
 
 - [ ] **Step 5: Bring Postgres up and verify connectivity**
 
@@ -2522,11 +2525,13 @@ export function AppHeader() {
 ```tsx
 // apps/web/src/pages/LoginPage.tsx
 import { useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { strings } from '../strings';
 
 export function LoginPage() {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -2535,6 +2540,7 @@ export function LoginPage() {
     setError(null);
     try {
       await login(email);
+      navigate('/', { replace: true });
     } catch {
       setError(strings.loginErrorMessage);
     }
@@ -3042,19 +3048,19 @@ export function ServiceDetail() {
     setReporting(false);
   }
 
-  if (!service) return <p role="status">Loading…</p>;
+  if (!service) return <p role="status">{strings.loadingLabel}</p>;
 
   return (
     <main className="mx-auto max-w-2xl space-y-4 bg-surface p-6">
       <h1 className="font-heading text-2xl font-bold text-ink">{service.name}</h1>
       <p className="text-gray-700">{service.description}</p>
       <dl className="grid grid-cols-2 gap-2 rounded border border-line bg-card p-4 text-sm">
-        <dt className="font-medium">Category</dt><dd>{service.category}</dd>
-        {service.vendorName && (<><dt className="font-medium">Vendor</dt><dd>{service.vendorName}</dd></>)}
-        <dt className="font-medium">Support</dt><dd>{service.supportContact}</dd>
+        <dt className="font-medium">{strings.categoryLabel}</dt><dd>{service.category}</dd>
+        {service.vendorName && (<><dt className="font-medium">{strings.vendorLabel}</dt><dd>{service.vendorName}</dd></>)}
+        <dt className="font-medium">{strings.supportLabel}</dt><dd>{service.supportContact}</dd>
       </dl>
       <button type="button" onClick={onLaunch} className="rounded bg-accent px-4 py-2 font-heading text-sm font-semibold uppercase tracking-wide text-white hover:bg-accent-dark">
-        Launch
+        {strings.launchButton}
       </button>
       {!reporting && (
         <button type="button" onClick={() => setReporting(true)} className="ml-2 rounded border border-accent px-4 py-2 font-heading text-sm font-semibold uppercase tracking-wide text-accent hover:bg-accent hover:text-white">
@@ -3063,15 +3069,27 @@ export function ServiceDetail() {
       )}
       {reporting && (
         <form onSubmit={onSubmitReport} className="space-y-2 rounded border border-line bg-card p-4">
-          <label htmlFor="issue-description">Describe the issue</label>
+          <label htmlFor="issue-description">{strings.describeIssueLabel}</label>
           <textarea id="issue-description" required value={description} onChange={(e) => setDescription(e.target.value)} className="w-full rounded border border-line p-2 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent" />
-          <button type="submit" className="rounded bg-accent px-4 py-2 font-heading text-sm font-semibold uppercase tracking-wide text-white hover:bg-accent-dark">Submit</button>
+          <button type="submit" className="rounded bg-accent px-4 py-2 font-heading text-sm font-semibold uppercase tracking-wide text-white hover:bg-accent-dark">{strings.submitButton}</button>
         </form>
       )}
-      {submitted && <p role="status">Thanks — your report has been sent.</p>}
+      {submitted && <p role="status">{strings.reportSubmittedMessage}</p>}
     </main>
   );
 }
+```
+
+**Required `strings.ts` additions** (add these keys — `loadingLabel` may already exist from Task 14's implementer extending the file; check first and only add what's missing):
+```typescript
+  loadingLabel: 'Loading…', // skip if Task 14 already added this
+  categoryLabel: 'Category',
+  vendorLabel: 'Vendor',
+  supportLabel: 'Support',
+  launchButton: 'Launch',
+  describeIssueLabel: 'Describe the issue',
+  submitButton: 'Submit',
+  reportSubmittedMessage: 'Thanks — your report has been sent.',
 ```
 
 Wire route in `App.tsx`:
@@ -3145,6 +3163,8 @@ Expected: FAIL — current stub has no categories/request-access UI.
 
 ```tsx
 // apps/web/src/components/EmptyState.tsx
+import { strings } from '../strings';
+
 export function EmptyState({
   title, hint, categories = [], onSelectCategory,
 }: {
@@ -3156,7 +3176,7 @@ export function EmptyState({
       <p className="text-sm text-gray-600">{hint}</p>
       {categories.length > 0 && (
         <div>
-          <p className="text-sm font-medium">Browse a category:</p>
+          <p className="text-sm font-medium">{strings.browseCategoryLabel}</p>
           <div className="mt-1 flex justify-center gap-2">
             {categories.map((c) => (
               <button key={c} type="button" onClick={() => onSelectCategory?.(c)} className="rounded border border-line px-2 py-1 text-sm hover:border-accent">
@@ -3167,14 +3187,22 @@ export function EmptyState({
         </div>
       )}
       <button type="button" disabled aria-disabled="true" className="rounded border border-line px-3 py-1 text-sm text-gray-400" title="Coming soon">
-        Request a new service
+        {strings.requestServiceButton}
       </button>
       <p className="text-sm">
-        Still stuck? Contact the <a href="mailto:helpdesk@launchpad.local" className="text-accent underline">help desk</a>.
+        {strings.stillStuckPrefix} <a href="mailto:helpdesk@launchpad.local" className="text-accent underline">{strings.helpDeskLinkText}</a>.
       </p>
     </div>
   );
 }
+```
+
+**Required `strings.ts` additions:**
+```typescript
+  browseCategoryLabel: 'Browse a category:',
+  requestServiceButton: 'Request a new service',
+  stillStuckPrefix: 'Still stuck? Contact the',
+  helpDeskLinkText: 'help desk',
 ```
 
 - [ ] **Step 4: Run test to verify it passes**

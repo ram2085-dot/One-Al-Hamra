@@ -5,9 +5,19 @@ import { CatalogHome } from './pages/CatalogHome';
 import { ServiceDetail } from './pages/ServiceDetail';
 import { AppHeader } from './components/AppHeader';
 import { AdminConsole } from './pages/admin/AdminConsole';
+import { strings } from './strings';
+
+/**
+ * While the on-mount session probe (GET /auth/me) is in flight, `user` is still null even for a
+ * signed-in visitor — redirecting now would bounce every page refresh to /login.
+ */
+function Initializing() {
+  return <p role="status">{strings.loadingLabel}</p>;
+}
 
 function RequireAuth({ children }: { children: JSX.Element }) {
-  const { user } = useAuth();
+  const { user, initializing } = useAuth();
+  if (initializing) return <Initializing />;
   if (!user) return <Navigate to="/login" replace />;
   return (
     <>
@@ -18,7 +28,8 @@ function RequireAuth({ children }: { children: JSX.Element }) {
 }
 
 function RequireRole({ role, children }: { role: string; children: JSX.Element }) {
-  const { user } = useAuth();
+  const { user, initializing } = useAuth();
+  if (initializing) return <Initializing />;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== role) return <Navigate to="/" replace />;
   return (

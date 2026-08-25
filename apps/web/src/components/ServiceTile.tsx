@@ -7,6 +7,8 @@ export interface ServiceSummary {
   category: string;
   tags: string[];
   launchType: 'SSO' | 'CREDENTIAL';
+  /** Projected by GET /catalog and /catalog/search; optional so older mocks/fixtures still type. */
+  isFavorite?: boolean;
 }
 
 interface Props {
