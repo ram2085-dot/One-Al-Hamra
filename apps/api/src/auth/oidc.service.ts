@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { Request } from 'express';
 import { Issuer, generators, type Client } from 'openid-client';
 
 @Injectable()
@@ -36,9 +37,9 @@ export class OidcService {
     return { url, codeVerifier, state };
   }
 
-  async handleCallback(callbackParams: Record<string, string>, codeVerifier: string, state: string): Promise<{ email: string }> {
+  async handleCallback(req: Request, codeVerifier: string, state: string): Promise<{ email: string }> {
     const client = await this.getClient();
-    const params = client.callbackParams({ query: callbackParams } as any);
+    const params = client.callbackParams(req);
     const tokenSet = await client.callback(this.config.get<string>('OIDC_REDIRECT_URI')!, params, { code_verifier: codeVerifier, state });
     const userinfo = await client.userinfo(tokenSet);
     return { email: userinfo.email as string };

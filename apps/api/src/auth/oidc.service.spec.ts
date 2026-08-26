@@ -54,12 +54,14 @@ describe('OidcService', () => {
     );
   });
 
-  it('exchanges the callback, verifying PKCE and state with the caller-supplied values, and returns the email from userinfo', async () => {
+  it('exchanges the callback, verifying PKCE with the caller-supplied verifier, and returns the email from userinfo', async () => {
+    const fakeReq = { url: '/auth/oidc/callback?code=abc' } as any;
     mockClient.callbackParams.mockReturnValue({ code: 'abc' });
     mockClient.callback.mockResolvedValue({ access_token: 'tok' });
     mockClient.userinfo.mockResolvedValue({ email: 'admin@launchpad.local' });
-    const result = await service.handleCallback({ code: 'abc' }, 'mock-code-verifier', 'mock-state');
+    const result = await service.handleCallback(fakeReq, 'mock-code-verifier', 'mock-state');
     expect(result).toEqual({ email: 'admin@launchpad.local' });
+    expect(mockClient.callbackParams).toHaveBeenCalledWith(fakeReq);
     expect(mockClient.callback).toHaveBeenCalledWith(
       'http://localhost:3001/auth/oidc/callback',
       { code: 'abc' },

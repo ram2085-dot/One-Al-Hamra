@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import type { User } from '@prisma/client';
@@ -33,7 +33,7 @@ export class AuthController {
 
   @Public()
   @Get('oidc/callback')
-  async oidcCallback(@Query() query: Record<string, string>, @Req() req: Request, @Res() res: Response) {
+  async oidcCallback(@Req() req: Request, @Res() res: Response) {
     const codeVerifier = req.cookies?.oidc_verifier;
     const state = req.cookies?.oidc_state;
     res.clearCookie('oidc_verifier');
@@ -44,7 +44,7 @@ export class AuthController {
       );
       return;
     }
-    const { email } = await this.oidcService.handleCallback(query, codeVerifier, state);
+    const { email } = await this.oidcService.handleCallback(req, codeVerifier, state);
     let token: string;
     try {
       ({ token } = await this.authService.login(email));
