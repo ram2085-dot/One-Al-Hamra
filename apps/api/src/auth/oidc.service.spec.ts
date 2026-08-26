@@ -50,6 +50,7 @@ describe('OidcService', () => {
         state: 'mock-state',
         code_challenge: 'mock-challenge-for-mock-code-verifier',
         code_challenge_method: 'S256',
+        prompt: 'login',
       }),
     );
   });
