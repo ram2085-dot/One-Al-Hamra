@@ -58,4 +58,8 @@ export const strings = {
   removeButton: 'Remove',
   anyDepartmentLabel: 'Any department',
   anyRoleLabel: 'Any role',
+  ssoTargetLabel: 'SSO Target',
+  ssoTargetNone: 'None',
+  ssoTargetDemoAppA: 'Demo App A',
+  ssoTargetDemoAppB: 'Demo App B',
 };

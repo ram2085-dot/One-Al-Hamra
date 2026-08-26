@@ -6,8 +6,8 @@ import { AuthContext, type AuthContextValue } from '../auth/AuthContext';
 import * as client from '../api/client';
 
 const services = [
-  { id: 's1', name: 'Finance Expense System', status: 'ACTIVE', category: 'Finance' },
-  { id: 's2', name: 'Legacy Timesheet Tool', status: 'RETIRED', category: 'HR' },
+  { id: 's1', name: 'Finance Expense System', status: 'ACTIVE', category: 'Finance', launchType: 'SSO', ssoTargetApp: null },
+  { id: 's2', name: 'Legacy Timesheet Tool', status: 'RETIRED', category: 'HR', launchType: 'SSO', ssoTargetApp: null },
 ];
 
 const authValue: AuthContextValue = {
