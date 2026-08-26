@@ -9,5 +9,6 @@ import { AuditModule } from '../audit/audit.module';
   imports: [AuthModule, AuditModule],
   controllers: [CatalogController],
   providers: [CatalogService, PrismaService],
+  exports: [CatalogService],
 })
 export class CatalogModule {}

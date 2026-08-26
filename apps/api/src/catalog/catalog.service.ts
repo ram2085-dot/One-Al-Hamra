@@ -113,7 +113,7 @@ export class CatalogService {
    * Throws 404 (never 403 — existence must not leak) unless the user is entitled to this ACTIVE
    * service. Used by every per-service action as the single entitlement gate.
    */
-  private async assertEntitled(user: User, id: string) {
+  async assertEntitled(user: User, id: string) {
     const service = await this.prisma.service.findFirst({
       where: { id, status: 'ACTIVE', entitlements: { some: this.entitlementWhere(user) } },
     });
