@@ -12,15 +12,16 @@
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",
-    "@nestjs/core": "^10.3.0",
-    "@nestjs/platform-express": "^10.3.0",
     "@nestjs/config": "^3.2.0",
+    "@nestjs/core": "^10.3.0",
     "@nestjs/mapped-types": "^2.0.5",
+    "@nestjs/platform-express": "^10.3.0",
     "@prisma/client": "^5.10.0",
-    "class-validator": "^0.14.1",
     "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
     "cookie-parser": "^1.4.6",
     "jsonwebtoken": "^9.0.2",
+    "openid-client": "^5.7.1",
     "reflect-metadata": "^0.2.1",
     "rxjs": "^7.8.1"
   },
@@ -41,10 +42,16 @@
     "typescript": "^5.3.3"
   },
   "jest": {
-    "moduleFileExtensions": ["js", "json", "ts"],
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
-    "transform": { "^.+\\.(t|j)s$": "ts-jest" },
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
     "testEnvironment": "node"
   },
   "prisma": {
