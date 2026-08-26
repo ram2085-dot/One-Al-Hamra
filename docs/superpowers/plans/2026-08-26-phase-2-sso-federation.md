@@ -163,7 +163,13 @@ DEMO_APP_B_REDIRECT_URI="http://localhost:4002/callback"
 ```
 Copy to `apps/mock-idp/.env` for local dev (not committed).
 
-- [ ] **Step 2: Write the failing test**
+- [ ] **Step 2: Install dependencies now**
+
+Run: `cd apps/mock-idp && npm install`
+
+Do this now, before writing any tests — Step 4 below imports `pg` (even though the test mocks it, `jest.mock('pg', factory)` without `{ virtual: true }` still needs the real package resolvable), and it must already be in `node_modules` by the time tests run.
+
+- [ ] **Step 3: Write the failing test**
 
 ```typescript
 // apps/mock-idp/src/users.spec.ts
@@ -200,12 +206,12 @@ describe('users', () => {
 });
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [ ] **Step 4: Run test to verify it fails**
 
 Run: `cd apps/mock-idp && npx jest users.spec.ts`
 Expected: FAIL — `Cannot find module './users'`.
 
-- [ ] **Step 4: Implement `users.ts`**
+- [ ] **Step 5: Implement `users.ts`**
 
 ```typescript
 // apps/mock-idp/src/users.ts
@@ -234,15 +240,14 @@ export async function findUserById(id: string): Promise<MockUser | null> {
 }
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [ ] **Step 6: Run test to verify it passes**
 
 Run: `npx jest users.spec.ts`
 Expected: PASS (3 tests).
 
-- [ ] **Step 6: Install dependencies and commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-cd apps/mock-idp && npm install
 cd ../..
 git add apps/mock-idp
 git commit -m "feat(mock-idp): scaffold package with read-only user lookup"
@@ -461,7 +466,13 @@ git commit -m "chore: register mock-idp and demo-app workspaces"
 - Consumes: `openid-client`, env vars `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI`.
 - Produces: `OidcService.getAuthorizationUrl(): Promise<string>`, `OidcService.handleCallback(callbackParams: Record<string, string>): Promise<{ email: string }>` — Task 6's `AuthController` depends on both exact method names/signatures.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Install `openid-client` now**
+
+Run: `cd apps/api && npm install openid-client@^5`
+
+Do this before writing any tests — Step 3 below `jest.mock('openid-client', ...)`s this package, which still needs to resolve from `node_modules` for the mock to register (no `{ virtual: true }` is used), and Step 3's real implementation imports it directly.
+
+- [ ] **Step 2: Write the failing test**
 
 ```typescript
 // apps/api/src/auth/oidc.service.spec.ts
@@ -518,12 +529,12 @@ describe('OidcService', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 3: Run test to verify it fails**
 
 Run: `cd apps/api && npx jest oidc.service.spec.ts`
 Expected: FAIL — `Cannot find module './oidc.service'`.
 
-- [ ] **Step 3: Implement `OidcService`**
+- [ ] **Step 4: Implement `OidcService`**
 
 ```typescript
 // apps/api/src/auth/oidc.service.ts
@@ -570,14 +581,12 @@ export class OidcService {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 5: Run test to verify it passes**
 
 Run: `npx jest oidc.service.spec.ts`
 Expected: PASS (2 tests).
 
-- [ ] **Step 5: Add env vars and install `openid-client`**
-
-Run: `cd apps/api && npm install openid-client@^5`
+- [ ] **Step 6: Add env vars**
 
 Add to `apps/api/.env` (create alongside the existing `.env` if not already tracked as `.env.example` at repo root — check `.env.example` at repo root first and add these there too):
 ```
@@ -591,7 +600,7 @@ DEMO_APP_B_URL="http://localhost:4002/login"
 ```
 (`WEB_BASE_URL` and the two `DEMO_APP_*_URL` vars are used by Tasks 6 and 10 respectively — added here so one env-file edit covers the whole phase.)
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add apps/api/src/auth/oidc.service.ts apps/api/src/auth/oidc.service.spec.ts apps/api/package.json apps/api/package-lock.json .env.example
@@ -1340,6 +1349,8 @@ Remove the `login = useCallback(...)` block entirely, and change the provider's 
 ```
 Remove the now-unused `useCallback` import if `logout` no longer needs it — check: `logout` still uses `useCallback`, so keep the import.
 
+`apps/web/src/__tests__/AdminConsole.test.tsx`'s `authValue` fixture (added when `AdminConsole.test.tsx` was fixed to wrap in `AuthContext.Provider`) sets `login: vi.fn()`. Once `login` is removed from `AuthContextValue`, that line becomes a TypeScript excess-property error on an object literal typed as `AuthContextValue`. Remove that one line from the fixture in this same task — do not leave it for Task 15, which touches a different part of that file (the `services` fixture, not `authValue`).
+
 - [ ] **Step 4: Update `apiClient.ts`'s `NO_REDIRECT_ON_401` list**
 
 `/auth/login` no longer exists as a route; remove it from the list:
@@ -1660,7 +1671,7 @@ test('SSO tile launch lands authenticated in the demo app with no second login p
   await page.getByRole('button', { name: /add entitlement/i }).click();
   await page.getByLabel('SSO Target').selectOption('DEMO_APP_A');
 
-  await page.getByRole('link', { name: /sign out/i }).click();
+  await page.getByRole('button', { name: /sign out/i }).click();
   await loginAs(page, 'finance.employee@launchpad.local');
   await page.getByText('E2E SSO Demo Service').click();
   await page.getByRole('button', { name: /launch/i }).click();
