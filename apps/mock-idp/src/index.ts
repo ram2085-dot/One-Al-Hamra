@@ -1,3 +1,11 @@
+import dotenv from 'dotenv';
+
+// Must run before importing `./users` (and `./provider`): both read process.env at module
+// load time (e.g. `./users`'s pg Pool is constructed from DATABASE_URL as soon as it's
+// required), and TS-compiled CommonJS `require()`s execute in source order, so dotenv.config()
+// has to come before those imports textually, not just before the first process.env read.
+dotenv.config();
+
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { buildProvider } from './provider';

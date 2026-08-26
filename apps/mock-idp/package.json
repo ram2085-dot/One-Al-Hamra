@@ -8,6 +8,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "express": "^4.19.2",
     "oidc-provider": "^8.5.1",
     "pg": "^8.11.5"
