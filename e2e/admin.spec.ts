@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { loginAs } from './helpers';
 
 // Locators cross-checked against apps/web/src/pages/LoginPage.tsx,
 // apps/web/src/pages/admin/AdminConsole.tsx, ServiceForm.tsx, EntitlementEditor.tsx,
@@ -8,9 +9,7 @@ import { test, expect } from '@playwright/test';
 test('admin creates a service and entitlement; it appears for the entitled user without restart', async ({ browser }) => {
   const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
-  await adminPage.goto('/login');
-  await adminPage.getByLabel('Email').fill('admin@launchpad.local');
-  await adminPage.getByRole('button', { name: /sign in/i }).click();
+  await loginAs(adminPage, 'admin@launchpad.local');
   await adminPage.getByRole('link', { name: /admin/i }).click();
   await adminPage.getByLabel('Name').fill('E2E New Service');
   await adminPage.getByLabel('Category').fill('IT');
@@ -23,16 +22,12 @@ test('admin creates a service and entitlement; it appears for the entitled user 
 
   const engContext = await browser.newContext();
   const engPage = await engContext.newPage();
-  await engPage.goto('/login');
-  await engPage.getByLabel('Email').fill('eng.employee@launchpad.local');
-  await engPage.getByRole('button', { name: /sign in/i }).click();
+  await loginAs(engPage, 'eng.employee@launchpad.local');
   await expect(engPage.getByText('E2E New Service')).toBeVisible();
 });
 
 test('retiring a service removes it from the catalog but not from admin history', async ({ page }) => {
-  await page.goto('/login');
-  await page.getByLabel('Email').fill('admin@launchpad.local');
-  await page.getByRole('button', { name: /sign in/i }).click();
+  await loginAs(page, 'admin@launchpad.local');
   await page.getByRole('link', { name: /admin/i }).click();
   const row = page.getByText('Finance Expense System').locator('..');
   await row.getByRole('button', { name: /retire/i }).click();
