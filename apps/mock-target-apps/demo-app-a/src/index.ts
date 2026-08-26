@@ -1,6 +1,9 @@
+import dotenv from 'dotenv';
 import express from 'express';
 import session from 'express-session';
 import { Issuer, generators } from 'openid-client';
+
+dotenv.config();
 
 const PORT = Number(process.env.PORT ?? 4001);
 const APP_NAME = process.env.APP_NAME ?? 'Demo App A';
