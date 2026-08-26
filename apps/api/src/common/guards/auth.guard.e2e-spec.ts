@@ -20,16 +20,16 @@ describe('AuthGuard (e2e)', () => {
     await request(app.getHttpServer()).get('/catalog').expect(401);
   });
 
-  it('allows /auth/login without a session', async () => {
+  it('allows /auth/dev-login without a session', async () => {
     const res = await request(app.getHttpServer())
-      .post('/auth/login')
+      .post('/auth/dev-login')
       .send({ email: 'admin@launchpad.local' });
     expect(res.status).toBe(201);
   });
 
   it('GET /auth/me returns the safe user projection for a live session', async () => {
     const agent = request.agent(app.getHttpServer());
-    await agent.post('/auth/login').send({ email: 'finance.employee@launchpad.local' });
+    await agent.post('/auth/dev-login').send({ email: 'finance.employee@launchpad.local' });
     const res = await agent.get('/auth/me');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({

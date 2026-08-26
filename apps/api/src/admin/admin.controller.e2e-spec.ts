@@ -23,13 +23,13 @@ describe('/admin/services RBAC (e2e)', () => {
 
   it('rejects a non-admin employee with 403', async () => {
     const agent = request.agent(app.getHttpServer());
-    await agent.post('/auth/login').send({ email: 'finance.employee@launchpad.local' });
+    await agent.post('/auth/dev-login').send({ email: 'finance.employee@launchpad.local' });
     await agent.get('/admin/services').expect(403);
   });
 
   it('allows CATALOG_ADMIN and returns retired/inactive services too', async () => {
     const agent = request.agent(app.getHttpServer());
-    await agent.post('/auth/login').send({ email: 'admin@launchpad.local' });
+    await agent.post('/auth/dev-login').send({ email: 'admin@launchpad.local' });
     const res = await agent.get('/admin/services');
     expect(res.status).toBe(200);
     expect(res.body.map((s: any) => s.name)).toContain('Legacy Timesheet Tool');
@@ -37,7 +37,7 @@ describe('/admin/services RBAC (e2e)', () => {
 
   it('includes each service\'s entitlements and aliases so the console can list/remove them', async () => {
     const agent = request.agent(app.getHttpServer());
-    await agent.post('/auth/login').send({ email: 'admin@launchpad.local' });
+    await agent.post('/auth/dev-login').send({ email: 'admin@launchpad.local' });
     const res = await agent.get('/admin/services');
     const expenseSystem = res.body.find((s: any) => s.name === 'Finance Expense System');
     expect(expenseSystem.entitlements.map((e: any) => e.department)).toContain('Finance');
@@ -47,7 +47,7 @@ describe('/admin/services RBAC (e2e)', () => {
 
   it('admin create produces exactly one ADMIN_CHANGE audit row', async () => {
     const agent = request.agent(app.getHttpServer());
-    const login = await agent.post('/auth/login').send({ email: 'admin@launchpad.local' });
+    const login = await agent.post('/auth/dev-login').send({ email: 'admin@launchpad.local' });
     const prisma = new (require('@prisma/client').PrismaClient)();
     const before = await prisma.auditLog.count({ where: { userId: login.body.id, eventType: 'ADMIN_CHANGE' } });
     const created = await agent.post('/admin/services').send({
@@ -62,7 +62,7 @@ describe('/admin/services RBAC (e2e)', () => {
 
   it('removing a non-existent entitlement 404s rather than 500ing', async () => {
     const agent = request.agent(app.getHttpServer());
-    const login = await agent.post('/auth/login').send({ email: 'admin@launchpad.local' });
+    const login = await agent.post('/auth/dev-login').send({ email: 'admin@launchpad.local' });
     const created = await agent.post('/admin/services').send({
       name: 'Delete Guard Svc', description: 'd', category: 'IT', tags: [], ownerId: login.body.id,
       launchType: 'SSO', supportContact: 'x@y.com',
@@ -98,7 +98,7 @@ describe('entitlement changes propagate immediately', () => {
 
   it('a newly entitled user sees the service in /catalog without any restart', async () => {
     const adminAgent = request.agent(app.getHttpServer());
-    const adminLogin = await adminAgent.post('/auth/login').send({ email: 'admin@launchpad.local' });
+    const adminLogin = await adminAgent.post('/auth/dev-login').send({ email: 'admin@launchpad.local' });
     const created = await adminAgent.post('/admin/services').send({
       name: 'Propagation Test Svc', description: 'd', category: 'IT', tags: [],
       ownerId: adminLogin.body.id,
@@ -107,7 +107,7 @@ describe('entitlement changes propagate immediately', () => {
     createdServiceIds.push(created.body.id);
 
     const engAgent = request.agent(app.getHttpServer());
-    await engAgent.post('/auth/login').send({ email: 'eng.employee@launchpad.local' });
+    await engAgent.post('/auth/dev-login').send({ email: 'eng.employee@launchpad.local' });
     const before = await engAgent.get('/catalog');
     expect(before.body.map((s: any) => s.name)).not.toContain('Propagation Test Svc');
 
@@ -119,7 +119,7 @@ describe('entitlement changes propagate immediately', () => {
 
   it('a row with both department and role set requires BOTH to match (spec §6 AND-within-row)', async () => {
     const adminAgent = request.agent(app.getHttpServer());
-    const adminLogin = await adminAgent.post('/auth/login').send({ email: 'admin@launchpad.local' });
+    const adminLogin = await adminAgent.post('/auth/dev-login').send({ email: 'admin@launchpad.local' });
     const created = await adminAgent.post('/admin/services').send({
       name: 'AND Row Test Svc', description: 'd', category: 'IT', tags: [],
       ownerId: adminLogin.body.id,
@@ -134,7 +134,7 @@ describe('entitlement changes propagate immediately', () => {
       .expect(201);
 
     const engAgent = request.agent(app.getHttpServer());
-    await engAgent.post('/auth/login').send({ email: 'eng.employee@launchpad.local' });
+    await engAgent.post('/auth/dev-login').send({ email: 'eng.employee@launchpad.local' });
     const res = await engAgent.get('/catalog');
     expect(res.body.map((s: any) => s.name)).not.toContain('AND Row Test Svc');
     expect((await engAgent.get(`/catalog/${created.body.id}`)).status).toBe(404);
