@@ -38,5 +38,53 @@ services:
     depends_on:
       - api
 
+  mock-idp:
+    build:
+      context: .
+      dockerfile: apps/mock-idp/Dockerfile
+    environment:
+      DATABASE_URL: "postgresql://launchpad:launchpad_dev_only@postgres:5432/launchpad"
+      PORT: 4000
+      ISSUER: "http://localhost:4000"
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  demo-app-a:
+    build:
+      context: .
+      dockerfile: apps/mock-target-apps/demo-app-a/Dockerfile
+    environment:
+      PORT: 4001
+      APP_NAME: "Demo App A"
+      OIDC_ISSUER_URL: "http://mock-idp:4000"
+      CLIENT_ID: "demo-app-a"
+      CLIENT_SECRET: "demo-app-a-secret"
+      REDIRECT_URI: "http://localhost:4001/callback"
+      SESSION_SECRET: "dev-only-demo-app-a-session-secret"
+    ports:
+      - "4001:4001"
+    depends_on:
+      - mock-idp
+
+  demo-app-b:
+    build:
+      context: .
+      dockerfile: apps/mock-target-apps/demo-app-b/Dockerfile
+    environment:
+      PORT: 4002
+      APP_NAME: "Demo App B"
+      OIDC_ISSUER_URL: "http://mock-idp:4000"
+      CLIENT_ID: "demo-app-b"
+      CLIENT_SECRET: "demo-app-b-secret"
+      REDIRECT_URI: "http://localhost:4002/callback"
+      SESSION_SECRET: "dev-only-demo-app-b-session-secret"
+    ports:
+      - "4002:4002"
+    depends_on:
+      - mock-idp
+
 volumes:
   pgdata:

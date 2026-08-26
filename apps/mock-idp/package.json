@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "start:dev": "ts-node-dev --respawn src/index.ts",
+    "start": "ts-node src/index.ts",
     "test": "jest"
   },
   "dependencies": {
