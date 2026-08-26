@@ -33,6 +33,15 @@ export class OidcService {
       state,
       code_challenge: generators.codeChallenge(codeVerifier),
       code_challenge_method: 'S256',
+      // Force a fresh mock-idp login (bypassing any existing IdP session) on every explicit
+      // portal sign-in click. Without this, once the browser has an active mock-idp session for
+      // one user, clicking "Sign in with SSO" again silently re-authenticates as that same user
+      // instead of showing the picker — there'd be no way to switch identities in one browser
+      // short of clearing cookies. This is distinct from an SSO *launch* to a target app (see
+      // sso-launch.service.ts), which never touches this endpoint and so still reuses the
+      // existing mock-idp session silently, which is the actual "no second login prompt" behavior
+      // under test.
+      prompt: 'login',
     });
     return { url, codeVerifier, state };
   }
