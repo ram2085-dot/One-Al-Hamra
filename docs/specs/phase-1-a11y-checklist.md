@@ -192,8 +192,12 @@ finally happens.
       after a mutation. Recommend a shared fix (e.g. move focus to the page's `<h1>` on
       route change; move focus back to the action's trigger button after a table
       reload) rather than patching each call site individually.
-- [ ] Re-run the per-component axe-core checks (already embedded per Tasks 14–17)
-      after any further changes, and confirm they still pass.
+- [x] Re-ran the per-component axe-core checks — this surfaced a real violation not
+      caught by the earlier static audit or the live walkthrough: `ServiceTile.tsx`,
+      `AliasEditor.tsx`, and `EntitlementEditor.tsx` used `<h3>` directly under each
+      page's `<h1>`, skipping `<h2>` (WCAG heading-order). Fixed by demoting all three
+      to `<h2>`. Full frontend suite now 12/12 passing across all 5 test files,
+      including `has no accessibility violations` on `CatalogHome`.
 
 Phase 1's manual keyboard-only walkthrough requirement is now satisfied. The one
 outstanding item is the shared focus-management gap above — a real but moderate-severity
