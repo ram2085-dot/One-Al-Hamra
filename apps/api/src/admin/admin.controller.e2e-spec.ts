@@ -48,15 +48,16 @@ describe('/admin/services RBAC (e2e)', () => {
   it('admin create produces exactly one ADMIN_CHANGE audit row', async () => {
     const agent = request.agent(app.getHttpServer());
     const login = await agent.post('/auth/dev-login').send({ email: 'admin@launchpad.local' });
-    const prisma = new (require('@prisma/client').PrismaClient)();
-    const before = await prisma.auditLog.count({ where: { userId: login.body.id, eventType: 'ADMIN_CHANGE' } });
     const created = await agent.post('/admin/services').send({
       name: 'Test Service', description: 'd', category: 'IT', tags: [], ownerId: login.body.id,
       launchType: 'SSO', supportContact: 'x@y.com',
     }).expect(201);
     createdServiceIds.push(created.body.id);
-    const after = await prisma.auditLog.count({ where: { userId: login.body.id, eventType: 'ADMIN_CHANGE' } });
-    expect(after).toBe(before + 1);
+    const prisma = new (require('@prisma/client').PrismaClient)();
+    const count = await prisma.auditLog.count({
+      where: { userId: login.body.id, eventType: 'ADMIN_CHANGE', serviceId: created.body.id },
+    });
+    expect(count).toBe(1);
     await prisma.$disconnect();
   });
 
