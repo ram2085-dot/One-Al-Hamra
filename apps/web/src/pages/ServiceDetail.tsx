@@ -8,6 +8,7 @@ interface ServiceDetailData {
   id: string; name: string; description: string; category: string;
   tags: string[]; vendorName: string | null; ownerName: string | null;
   supportContact: string; docsUrl: string | null;
+  launchType: 'SSO' | 'CREDENTIAL';
 }
 
 export function ServiceDetail() {
@@ -45,10 +46,15 @@ export function ServiceDetail() {
   }, [id, reloadKey]);
 
   async function onLaunch() {
-    if (!id) return;
+    if (!id || !service) return;
     setActionFailed(false);
     try {
-      await apiClient.post(`/catalog/${id}/launch`);
+      if (service.launchType === 'SSO') {
+        const { redirectUrl } = await apiClient.get<{ redirectUrl: string }>(`/sso-launch/${id}`);
+        window.location.href = redirectUrl;
+      } else {
+        await apiClient.post(`/catalog/${id}/launch`);
+      }
     } catch {
       setActionFailed(true);
     }
