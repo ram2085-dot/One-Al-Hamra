@@ -464,13 +464,17 @@ git commit -m "chore: register mock-idp and demo-app workspaces"
 
 **Interfaces:**
 - Consumes: `openid-client`, env vars `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI`.
-- Produces: `OidcService.getAuthorizationUrl(): Promise<string>`, `OidcService.handleCallback(callbackParams: Record<string, string>): Promise<{ email: string }>` — Task 6's `AuthController` depends on both exact method names/signatures.
+- Produces: `OidcService.getAuthorizationUrl(): Promise<{ url: string; codeVerifier: string }>`, `OidcService.handleCallback(callbackParams: Record<string, string>, codeVerifier: string): Promise<{ email: string }>` — Task 6's `AuthController` depends on both exact method names/signatures.
+
+**Note — PKCE is required, not optional:** Task 3 confirmed by actually running `mock-idp` that the installed `oidc-provider` version requires PKCE for every client by default (RFC 9700 §2.1.1), and deliberately left that default in place since real RP libraries generate PKCE themselves. `openid-client` v5 does **not** generate or verify PKCE automatically on its own — the caller must generate `code_verifier`/`code_challenge` and pass them through explicitly. This task's `getAuthorizationUrl`/`handleCallback` signatures above reflect that; do not implement the simpler no-PKCE versions from an earlier draft of this plan.
 
 - [ ] **Step 1: Install `openid-client` now**
 
 Run: `cd apps/api && npm install openid-client@^5`
 
 Do this before writing any tests — Step 3 below `jest.mock('openid-client', ...)`s this package, which still needs to resolve from `node_modules` for the mock to register (no `{ virtual: true }` is used), and Step 3's real implementation imports it directly.
+
+**Watch for an ESM/CommonJS mismatch.** Task 3 found that `oidc-provider` (same maintainer, `panva`) ships as ESM-only (`"type": "module"`, no CJS build) in its currently-installed version. `openid-client` has the same maintainer and has made the same move in some major versions. `apps/api` compiles as CommonJS (`tsconfig.json`'s `"module": "commonjs"`, run via `ts-jest`/`ts-node`/`nest build`). After installing, check `node_modules/openid-client/package.json` for `"type": "module"` or a `"exports"` map with no `"require"` condition — if the plain `import { Issuer, generators } from 'openid-client'` at the top of Step 4's code fails to compile or throws `ERR_REQUIRE_ESM` at runtime, that confirms it. If so, do not fake around it: use a dynamic `const { Issuer, generators } = await import('openid-client');` inside `getClient()` instead of a static top-level import (Node's CommonJS runtime can `await import()` an ESM module; it just can't `require()` one), and adjust the Jest mock in Step 3's test accordingly (`jest.mock` still works the same way regardless of how the source imports it). Report exactly what you found and which form you used — this is the same kind of real-environment fact-finding Task 3 had to do, not something to assume either way.
 
 - [ ] **Step 2: Write the failing test**
 
@@ -489,7 +493,11 @@ const mockClient = {
 
 jest.mock('openid-client', () => ({
   Issuer: { discover: jest.fn(() => Promise.resolve({ Client: jest.fn(() => mockClient) })) },
-  generators: { state: () => 'mock-state' },
+  generators: {
+    state: () => 'mock-state',
+    codeVerifier: () => 'mock-code-verifier',
+    codeChallenge: (verifier: string) => `mock-challenge-for-${verifier}`,
+  },
 }));
 
 describe('OidcService', () => {
@@ -512,19 +520,31 @@ describe('OidcService', () => {
     service = moduleRef.get(OidcService);
   });
 
-  it('builds an authorization URL requesting openid+email scope', async () => {
+  it('builds an authorization URL requesting openid+email scope with a PKCE challenge, and returns the matching verifier', async () => {
     mockClient.authorizationUrl.mockReturnValue('http://localhost:4000/auth?mock=1');
-    const url = await service.getAuthorizationUrl();
+    const { url, codeVerifier } = await service.getAuthorizationUrl();
     expect(url).toBe('http://localhost:4000/auth?mock=1');
-    expect(mockClient.authorizationUrl).toHaveBeenCalledWith(expect.objectContaining({ scope: 'openid email' }));
+    expect(codeVerifier).toBe('mock-code-verifier');
+    expect(mockClient.authorizationUrl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: 'openid email',
+        code_challenge: 'mock-challenge-for-mock-code-verifier',
+        code_challenge_method: 'S256',
+      }),
+    );
   });
 
-  it('exchanges the callback and returns the email from userinfo', async () => {
+  it('exchanges the callback, verifying PKCE with the caller-supplied verifier, and returns the email from userinfo', async () => {
     mockClient.callbackParams.mockReturnValue({ code: 'abc' });
     mockClient.callback.mockResolvedValue({ access_token: 'tok' });
     mockClient.userinfo.mockResolvedValue({ email: 'admin@launchpad.local' });
-    const result = await service.handleCallback({ code: 'abc' });
+    const result = await service.handleCallback({ code: 'abc' }, 'mock-code-verifier');
     expect(result).toEqual({ email: 'admin@launchpad.local' });
+    expect(mockClient.callback).toHaveBeenCalledWith(
+      'http://localhost:3001/auth/oidc/callback',
+      { code: 'abc' },
+      { code_verifier: 'mock-code-verifier' },
+    );
   });
 });
 ```
@@ -563,18 +583,22 @@ export class OidcService {
     return this.clientPromise;
   }
 
-  async getAuthorizationUrl(): Promise<string> {
+  async getAuthorizationUrl(): Promise<{ url: string; codeVerifier: string }> {
     const client = await this.getClient();
-    return client.authorizationUrl({
+    const codeVerifier = generators.codeVerifier();
+    const url = client.authorizationUrl({
       scope: 'openid email',
       state: generators.state(),
+      code_challenge: generators.codeChallenge(codeVerifier),
+      code_challenge_method: 'S256',
     });
+    return { url, codeVerifier };
   }
 
-  async handleCallback(callbackParams: Record<string, string>): Promise<{ email: string }> {
+  async handleCallback(callbackParams: Record<string, string>, codeVerifier: string): Promise<{ email: string }> {
     const client = await this.getClient();
     const params = client.callbackParams({ query: callbackParams } as any);
-    const tokenSet = await client.callback(this.config.get<string>('OIDC_REDIRECT_URI')!, params);
+    const tokenSet = await client.callback(this.config.get<string>('OIDC_REDIRECT_URI')!, params, { code_verifier: codeVerifier });
     const userinfo = await client.userinfo(tokenSet);
     return { email: userinfo.email as string };
   }
@@ -627,9 +651,9 @@ git commit -m "feat(api): add OidcService wrapping openid-client for the portal'
 Replace the `@Public() @Post('login')` handler in `apps/api/src/auth/auth.controller.ts` with:
 
 ```typescript
-import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import type { User } from '@prisma/client';
 import { Public } from '../common/guards/auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -648,14 +672,28 @@ export class AuthController {
   @Public()
   @Get('oidc/login')
   async oidcLogin(@Res() res: Response) {
-    const url = await this.oidcService.getAuthorizationUrl();
+    const { url, codeVerifier } = await this.oidcService.getAuthorizationUrl();
+    // Short-lived, cleared on the very next request (the callback). httpOnly since it's a PKCE
+    // secret, not app state; separate from the `session` cookie because it exists for seconds,
+    // not 8 hours. Task 3 confirmed the mock IdP requires PKCE, and openid-client v5 doesn't
+    // generate/persist it on its own — this cookie is the RP-side "session" between the login
+    // redirect and the callback that verifies it.
+    res.cookie('oidc_verifier', codeVerifier, { httpOnly: true, sameSite: 'lax', maxAge: 5 * 60 * 1000 });
     res.redirect(url);
   }
 
   @Public()
   @Get('oidc/callback')
-  async oidcCallback(@Query() query: Record<string, string>, @Res() res: Response) {
-    const { email } = await this.oidcService.handleCallback(query);
+  async oidcCallback(@Query() query: Record<string, string>, @Req() req: Request, @Res() res: Response) {
+    const codeVerifier = req.cookies?.oidc_verifier;
+    res.clearCookie('oidc_verifier');
+    if (!codeVerifier) {
+      res.status(400).type('html').send(
+        `<!doctype html><html><body><h1>We couldn't sign you in.</h1><p>Your login session expired before it completed. Try signing in again.</p></body></html>`,
+      );
+      return;
+    }
+    const { email } = await this.oidcService.handleCallback(query, codeVerifier);
     let token: string;
     try {
       ({ token } = await this.authService.login(email));
@@ -759,6 +797,8 @@ git commit -m "feat(api): replace seeded login with OIDC callback flow; gate old
 - Consumes: `mock-idp` (Task 3) via `openid-client`, client `demo-app-a` / secret `demo-app-a-secret` / redirect `http://localhost:4001/callback` (must match Task 3's static client registration exactly).
 - Produces: `GET /login` (starts the federated login), `GET /callback` (completes it, renders a landing page) — Task 10's `sso-launch` module returns `http://localhost:4001/login` as this app's federated entry URL.
 
+**Note — PKCE required:** same finding as Task 5 — Task 3 confirmed the installed `oidc-provider` requires PKCE for every client, and `openid-client` v5 doesn't generate it automatically. The code below generates and verifies it via `express-session` (already used here for `oidcState`). If Task 5 found `openid-client` needs a dynamic `import()` instead of a static one due to an ESM-only package build, apply the same fix here.
+
 - [ ] **Step 1: Scaffold**
 
 ```bash
@@ -826,15 +866,25 @@ async function main() {
 
   app.get('/login', (req, res) => {
     const state = generators.state();
+    const codeVerifier = generators.codeVerifier();
     (req.session as any).oidcState = state;
-    res.redirect(client.authorizationUrl({ scope: 'openid email profile', state }));
+    (req.session as any).oidcCodeVerifier = codeVerifier;
+    res.redirect(
+      client.authorizationUrl({
+        scope: 'openid email profile',
+        state,
+        code_challenge: generators.codeChallenge(codeVerifier),
+        code_challenge_method: 'S256',
+      }),
+    );
   });
 
   app.get('/callback', async (req, res, next) => {
     try {
       const params = client.callbackParams(req);
       const expectedState = (req.session as any).oidcState;
-      const tokenSet = await client.callback(process.env.REDIRECT_URI!, params, { state: expectedState });
+      const codeVerifier = (req.session as any).oidcCodeVerifier;
+      const tokenSet = await client.callback(process.env.REDIRECT_URI!, params, { state: expectedState, code_verifier: codeVerifier });
       const userinfo = await client.userinfo(tokenSet);
       (req.session as any).user = userinfo;
       res.type('html').send(
