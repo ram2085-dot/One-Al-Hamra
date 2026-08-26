@@ -17,6 +17,8 @@ Internal Service Catalog & SSO Portal. See `Plan.md` and `docs/specs/phase-1-cor
 2. `docker compose exec api npx prisma db seed` (first run only — this also seeds the users `mock-idp` reads for the "Sign in with SSO" picker)
 3. Open http://localhost:5173
 
+**Known limitation:** the "Sign in with SSO" flow currently fails at the browser redirect step under Docker Compose — OIDC discovery resolves `mock-idp`'s endpoints to its Docker-internal hostname, which your browser (running on the host) can't reach. Use the "Run locally" path above for a working SSO demo; fixing this for Docker Compose needs endpoint-URL rewriting or host-alias work that hasn't been done yet.
+
 ## Tests
 - Backend unit + integration: `cd apps/api && npm test && npm run test:e2e`
 - Frontend unit + a11y: `cd apps/web && npm test`
