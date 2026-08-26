@@ -44,7 +44,19 @@ export class AuthController {
       );
       return;
     }
-    const { email } = await this.oidcService.handleCallback(req, codeVerifier, state);
+    let email: string;
+    try {
+      ({ email } = await this.oidcService.handleCallback(req, codeVerifier, state));
+    } catch {
+      // Covers a `state` mismatch (the actual CSRF-attack case the oidc_state cookie exists to
+      // detect), a malformed/replayed code, or any other openid-client exchange failure with
+      // mock-idp. Same plain-language treatment as the "no matching user" case below — this must
+      // never surface as a raw exception/500.
+      res.status(400).type('html').send(
+        `<!doctype html><html><body><h1>We couldn't sign you in.</h1><p>Something went wrong completing your sign-in. Try signing in again.</p></body></html>`,
+      );
+      return;
+    }
     let token: string;
     try {
       ({ token } = await this.authService.login(email));
