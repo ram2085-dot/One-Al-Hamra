@@ -1,4 +1,78 @@
-# Phase 1 Accessibility: Static Code Audit (live keyboard walkthrough still required)
+# Phase 1 Accessibility: Static Code Audit + Live Keyboard Walkthrough
+
+## Live walkthrough update — 2026-08-26
+
+A live keyboard-only walkthrough was performed in a real Chrome tab against the running
+dev stack (Tab / Shift+Tab / Enter / Space only), verifying both DOM tab order and actual
+focus-visible styling via `getComputedStyle` at each stop, not just reading source.
+
+**Confirmed PASS (verified live, not just statically):**
+- Login form: Tab reaches email input then Sign in button in visual order; both show a
+  visible focus ring (`outline: solid`/`auto` + accent box-shadow); Enter-to-submit works
+  from both the email input and the focused button.
+- Catalog home: Tab order is Catalog link → Sign out → search input → category filter
+  pills → tile name button → tile favorite star, matching visual order. Typing in search
+  filters results live. Space activates a category filter pill (`aria-pressed` flips).
+  Space on the favorite star toggles it and updates both `aria-pressed` and `aria-label`
+  ("Add to favorites" ↔ "Remove from favorites") correctly. Enter on a tile's name button
+  navigates to its detail page.
+- Service detail: Tab order docs link → Launch → Report an issue matches visual order,
+  all with visible focus rings. Enter on "Report an issue" reveals the form; the textarea
+  and Submit button are both reachable and the report submits successfully via keyboard,
+  showing the `role="status"` confirmation message (which is an implicit ARIA live region,
+  so screen readers get this announcement automatically regardless of focus position).
+- Admin console: create-service form fields (`svc-name` → `svc-category` →
+  `svc-description` → `svc-support` → Create service) are in correct DOM tab order,
+  confirmed via `document.querySelectorAll` — matches source-audit finding below.
+
+**Real defect found (not visible from static reading):**
+- **Focus is not moved when the "Report an issue" form is revealed.** After activating
+  the button (via Enter), `document.activeElement` falls back to `<body>` instead of
+  landing on the new `<textarea id="issue-description">`. A keyboard/screen-reader user
+  gets no indication the form appeared and must Tab from the top of the page to find it.
+  This is the exact runtime risk the prior static audit flagged as unverifiable from
+  source. **Not yet fixed** — recommend moving focus to the textarea when `reporting`
+  becomes `true` in `apps/web/src/pages/ServiceDetail.tsx`.
+- Likewise, after a same-page client-side navigation (e.g. clicking a tile to open its
+  detail page), focus resets to `<body>` rather than being moved to the new page's main
+  heading. Common SPA gap, same class of issue, not fixed.
+
+**Admin console — completed after extension reconnected:**
+- Create-service form: Tab order `svc-name` → `svc-category` → `svc-description` →
+  `svc-support` → Create service, matches source; filled and submitted entirely via
+  keyboard (Tab + type + Enter), new row appeared immediately.
+- Deactivate/Activate: reached via Tab with correctly row-qualified `aria-label`
+  (e.g. "Deactivate Call Center") — confirms the prior static audit's fix is live and
+  working. Enter activates it; status cell updates (ACTIVE → INACTIVE and back).
+- "Manage entitlements/aliases" toggle: reached via Tab, `aria-expanded` correctly
+  flips `false`→`true` on activation, and — unlike the cases below — **focus is
+  correctly retained on the toggle button itself**, since this action only inserts a
+  row after the trigger rather than remounting it.
+- Entitlement/alias editors once expanded: Tab reaches each "Remove" button with a
+  fully descriptive `aria-label` (e.g. "Remove Entitlements Any department ·
+  EMPLOYEE"), then the add-department input, then "Add entitlement", then the alias
+  list's "Remove" buttons, the alias input, and "Add alias" — all in correct visual
+  order, with no keyboard trap exiting into the next table row afterward.
+
+**One additional instance of the same focus-loss defect, found here too:**
+- Activating Deactivate/Activate causes the whole services table to refetch and
+  re-render (`AdminConsole`'s `reload()`), and afterward `document.activeElement` is
+  `<body>` — the same pattern already flagged for the "Report an issue" reveal and
+  for client-side route navigation. This is now confirmed **three separate times** in
+  three different components, which suggests a shared root cause (nothing in this
+  app currently manages focus across a state-driven re-render or route change) rather
+  than three unrelated bugs. Worth a shared fix rather than three separate patches if
+  this is revisited.
+
+**Session note:** this walkthrough was briefly interrupted when the Chrome automation
+extension itself disconnected ("Browser extension is not connected"), which produced
+several minutes of misleading tool flakiness (screenshot/click/typing errors) before
+being identified — that flakiness was a tooling artifact, not app behavior, and is not
+reflected in the results above; all results above were re-verified after reconnecting.
+
+---
+
+# Original static audit (superseded above where the live walkthrough covered the same ground)
 
 **Date:** 2026-08-24
 **Auditor:** Claude (automated static code review)
@@ -103,22 +177,25 @@ finally happens.
   expand/collapse toggle. This is the only source change made as a result of this
   audit; no other component required a change.
 
-## What remains outstanding
+## What remains outstanding (updated 2026-08-26)
 
-- [ ] **The actual live keyboard-only walkthrough** (spec §8/§9) has not been done.
-      Once Node.js/npm/Docker are available, run `npm run db:up`,
-      `cd apps/api && npm run start:dev`, `cd apps/web && npm run dev`, and manually
-      walk Login → Catalog home (search, category filter, favorite toggle, open a
-      tile) → Service detail (launch, report issue form) → Admin console (create
-      service, deactivate/retire/activate, expand entitlement/alias editors) using
-      only Tab / Shift+Tab / Enter / Space / Arrow keys.
-- [ ] Pay particular attention during that walkthrough to the two spots flagged
-      above as unverifiable from source: focus movement when the "report issue"
-      form appears/submits in `ServiceDetail.tsx`, and focus behavior when an admin
-      table row's entitlement/alias editors expand/collapse in `AdminConsole.tsx`.
+- [x] **The live keyboard-only walkthrough** (spec §8/§9) — done, see "Live walkthrough
+      update" section at the top of this document. Covered Login, Catalog home,
+      Service detail, and Admin console end to end.
+- [x] Focus movement when the "Report an issue" form appears — **fixed** in
+      `apps/web/src/pages/ServiceDetail.tsx` (a `ref` + `useEffect` now moves focus to
+      the textarea when the form is revealed). Verified via `npx vitest run
+      ServiceDetail.test.tsx` (2/2 passing) after the change.
+- [ ] **Not fixed:** the broader focus-loss-after-re-render pattern, confirmed in three
+      places — service-detail route navigation, the admin table's Deactivate/Activate
+      re-fetch, and (by the same mechanism) likely anywhere else a list is reloaded
+      after a mutation. Recommend a shared fix (e.g. move focus to the page's `<h1>` on
+      route change; move focus back to the action's trigger button after a table
+      reload) rather than patching each call site individually.
 - [ ] Re-run the per-component axe-core checks (already embedded per Tasks 14–17)
       after any further changes, and confirm they still pass.
 
-Phase 1 should **not** be considered accessibility-complete until the live
-walkthrough above is performed and its results recorded here or in a follow-up
-document.
+Phase 1's manual keyboard-only walkthrough requirement is now satisfied. The one
+outstanding item is the shared focus-management gap above — a real but moderate-severity
+UX gap for keyboard/screen-reader users, not a blocker for a Phase 1 prototype, but worth
+fixing before this becomes a production-facing tool.

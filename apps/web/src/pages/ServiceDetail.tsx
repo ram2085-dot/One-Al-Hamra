@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { ErrorState } from '../components/ErrorState';
@@ -19,6 +19,13 @@ export function ServiceDetail() {
   const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [actionFailed, setActionFailed] = useState(false);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  // Keyboard/screen-reader users get no other cue this form just appeared, since it's
+  // inserted after two already-focused buttons rather than replacing anything on screen.
+  useEffect(() => {
+    if (reporting) descriptionRef.current?.focus();
+  }, [reporting]);
 
   useEffect(() => {
     if (!id) return;
@@ -102,7 +109,7 @@ export function ServiceDetail() {
       {reporting && (
         <form onSubmit={onSubmitReport} className="space-y-2 rounded border border-line bg-card p-4">
           <label htmlFor="issue-description">{strings.describeIssueLabel}</label>
-          <textarea id="issue-description" required value={description} onChange={(e) => setDescription(e.target.value)} className="w-full rounded border border-line p-2 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent" />
+          <textarea ref={descriptionRef} id="issue-description" required value={description} onChange={(e) => setDescription(e.target.value)} className="w-full rounded border border-line p-2 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent" />
           <button type="submit" className="rounded bg-accent px-4 py-2 font-heading text-sm font-semibold uppercase tracking-wide text-white hover:bg-accent-dark">{strings.submitButton}</button>
         </form>
       )}
