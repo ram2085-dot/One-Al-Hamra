@@ -1273,7 +1273,7 @@ describe('GET /sso-launch/:serviceId (e2e)', () => {
     await empAgent.post('/auth/dev-login').send({ email: 'finance.employee@launchpad.local' });
     const res = await empAgent.get(`/sso-launch/${created.body.id}`);
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/not configured for SSO launch/i);
+    expect(res.body.message).toMatch(/isn't configured for SSO launch/i);
   });
 });
 ```
