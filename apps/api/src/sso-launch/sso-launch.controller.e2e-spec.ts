@@ -39,10 +39,17 @@ describe('GET /sso-launch/:serviceId (e2e)', () => {
     await adminAgent.patch(`/admin/services/${created.body.id}`).send({ ssoTargetApp: 'DEMO_APP_A' }).expect(200);
 
     const empAgent = request.agent(app.getHttpServer());
-    await empAgent.post('/auth/dev-login').send({ email: 'finance.employee@launchpad.local' });
+    const empLogin = await empAgent.post('/auth/dev-login').send({ email: 'finance.employee@launchpad.local' });
     const res = await empAgent.get(`/sso-launch/${created.body.id}`);
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ redirectUrl: 'http://localhost:4001/login' });
+
+    const prisma = new (require('@prisma/client').PrismaClient)();
+    const count = await prisma.auditLog.count({
+      where: { userId: empLogin.body.id, eventType: 'SSO_LAUNCH', serviceId: created.body.id },
+    });
+    expect(count).toBe(1);
+    await prisma.$disconnect();
   });
 
   it('404s for a service the user is not entitled to (same as /catalog/:id)', async () => {
