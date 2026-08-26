@@ -23,22 +23,23 @@ export class OidcService {
     return this.clientPromise;
   }
 
-  async getAuthorizationUrl(): Promise<{ url: string; codeVerifier: string }> {
+  async getAuthorizationUrl(): Promise<{ url: string; codeVerifier: string; state: string }> {
     const client = await this.getClient();
     const codeVerifier = generators.codeVerifier();
+    const state = generators.state();
     const url = client.authorizationUrl({
       scope: 'openid email',
-      state: generators.state(),
+      state,
       code_challenge: generators.codeChallenge(codeVerifier),
       code_challenge_method: 'S256',
     });
-    return { url, codeVerifier };
+    return { url, codeVerifier, state };
   }
 
-  async handleCallback(callbackParams: Record<string, string>, codeVerifier: string): Promise<{ email: string }> {
+  async handleCallback(callbackParams: Record<string, string>, codeVerifier: string, state: string): Promise<{ email: string }> {
     const client = await this.getClient();
     const params = client.callbackParams({ query: callbackParams } as any);
-    const tokenSet = await client.callback(this.config.get<string>('OIDC_REDIRECT_URI')!, params, { code_verifier: codeVerifier });
+    const tokenSet = await client.callback(this.config.get<string>('OIDC_REDIRECT_URI')!, params, { code_verifier: codeVerifier, state });
     const userinfo = await client.userinfo(tokenSet);
     return { email: userinfo.email as string };
   }

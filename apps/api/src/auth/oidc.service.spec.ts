@@ -38,30 +38,32 @@ describe('OidcService', () => {
     service = moduleRef.get(OidcService);
   });
 
-  it('builds an authorization URL requesting openid+email scope with a PKCE challenge, and returns the matching verifier', async () => {
+  it('builds an authorization URL requesting openid+email scope with a PKCE challenge, and returns the matching verifier and state', async () => {
     mockClient.authorizationUrl.mockReturnValue('http://localhost:4000/auth?mock=1');
-    const { url, codeVerifier } = await service.getAuthorizationUrl();
+    const { url, codeVerifier, state } = await service.getAuthorizationUrl();
     expect(url).toBe('http://localhost:4000/auth?mock=1');
     expect(codeVerifier).toBe('mock-code-verifier');
+    expect(state).toBe('mock-state');
     expect(mockClient.authorizationUrl).toHaveBeenCalledWith(
       expect.objectContaining({
         scope: 'openid email',
+        state: 'mock-state',
         code_challenge: 'mock-challenge-for-mock-code-verifier',
         code_challenge_method: 'S256',
       }),
     );
   });
 
-  it('exchanges the callback, verifying PKCE with the caller-supplied verifier, and returns the email from userinfo', async () => {
+  it('exchanges the callback, verifying PKCE and state with the caller-supplied values, and returns the email from userinfo', async () => {
     mockClient.callbackParams.mockReturnValue({ code: 'abc' });
     mockClient.callback.mockResolvedValue({ access_token: 'tok' });
     mockClient.userinfo.mockResolvedValue({ email: 'admin@launchpad.local' });
-    const result = await service.handleCallback({ code: 'abc' }, 'mock-code-verifier');
+    const result = await service.handleCallback({ code: 'abc' }, 'mock-code-verifier', 'mock-state');
     expect(result).toEqual({ email: 'admin@launchpad.local' });
     expect(mockClient.callback).toHaveBeenCalledWith(
       'http://localhost:3001/auth/oidc/callback',
       { code: 'abc' },
-      { code_verifier: 'mock-code-verifier' },
+      { code_verifier: 'mock-code-verifier', state: 'mock-state' },
     );
   });
 });
