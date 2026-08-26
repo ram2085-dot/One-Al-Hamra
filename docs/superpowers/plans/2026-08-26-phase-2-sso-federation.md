@@ -643,7 +643,7 @@ git commit -m "feat(api): add OidcService wrapping openid-client for the portal'
 - Modify: `apps/api/src/admin/admin.controller.e2e-spec.ts`
 
 **Interfaces:**
-- Consumes: `OidcService` (Task 5), `AuthService.login(email)` (unchanged, Phase 1).
+- Consumes: `OidcService.getAuthorizationUrl(): Promise<{ url, codeVerifier, state }>` and `OidcService.handleCallback(callbackParams, codeVerifier, state): Promise<{ email }>` (Task 5, updated with `state`-based CSRF verification after Task 5's own review), `AuthService.login(email)` (unchanged, Phase 1).
 - Produces: `GET /auth/oidc/login`, `GET /auth/oidc/callback`, `POST /auth/dev-login` (test-only, see Global Constraints deviation note) — every later e2e test task in this plan logs in via `POST /auth/dev-login`.
 
 - [ ] **Step 1: Update `AuthController`**
@@ -672,13 +672,15 @@ export class AuthController {
   @Public()
   @Get('oidc/login')
   async oidcLogin(@Res() res: Response) {
-    const { url, codeVerifier } = await this.oidcService.getAuthorizationUrl();
-    // Short-lived, cleared on the very next request (the callback). httpOnly since it's a PKCE
-    // secret, not app state; separate from the `session` cookie because it exists for seconds,
-    // not 8 hours. Task 3 confirmed the mock IdP requires PKCE, and openid-client v5 doesn't
-    // generate/persist it on its own — this cookie is the RP-side "session" between the login
-    // redirect and the callback that verifies it.
-    res.cookie('oidc_verifier', codeVerifier, { httpOnly: true, sameSite: 'lax', maxAge: 5 * 60 * 1000 });
+    const { url, codeVerifier, state } = await this.oidcService.getAuthorizationUrl();
+    // Short-lived, cleared on the very next request (the callback). httpOnly since these are
+    // PKCE/CSRF secrets, not app state; separate from the `session` cookie because they exist for
+    // seconds, not 8 hours. Task 3 confirmed the mock IdP requires PKCE, and openid-client v5
+    // doesn't generate/persist PKCE or verify `state` on its own — these cookies are the RP-side
+    // "session" between the login redirect and the callback that verifies both.
+    const cookieOpts = { httpOnly: true, sameSite: 'lax' as const, maxAge: 5 * 60 * 1000 };
+    res.cookie('oidc_verifier', codeVerifier, cookieOpts);
+    res.cookie('oidc_state', state, cookieOpts);
     res.redirect(url);
   }
 
@@ -686,14 +688,16 @@ export class AuthController {
   @Get('oidc/callback')
   async oidcCallback(@Query() query: Record<string, string>, @Req() req: Request, @Res() res: Response) {
     const codeVerifier = req.cookies?.oidc_verifier;
+    const state = req.cookies?.oidc_state;
     res.clearCookie('oidc_verifier');
-    if (!codeVerifier) {
+    res.clearCookie('oidc_state');
+    if (!codeVerifier || !state) {
       res.status(400).type('html').send(
         `<!doctype html><html><body><h1>We couldn't sign you in.</h1><p>Your login session expired before it completed. Try signing in again.</p></body></html>`,
       );
       return;
     }
-    const { email } = await this.oidcService.handleCallback(query, codeVerifier);
+    const { email } = await this.oidcService.handleCallback(query, codeVerifier, state);
     let token: string;
     try {
       ({ token } = await this.authService.login(email));
