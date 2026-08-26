@@ -26,6 +26,11 @@ enum ServiceStatus {
   RETIRED
 }
 
+enum SsoTargetApp {
+  DEMO_APP_A
+  DEMO_APP_B
+}
+
 model User {
   id             String    @id @default(uuid())
   email          String    @unique
@@ -53,6 +58,7 @@ model Service {
   supportContact String
   docsUrl        String?
   healthCheckUrl String?
+  ssoTargetApp   SsoTargetApp?
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
   aliases        ServiceAlias[]
