@@ -8,10 +8,9 @@ export class ApiError extends Error {
 
 /**
  * Paths that are allowed to 401 as part of normal operation, so they must NOT trigger the global
- * redirect: /auth/me is the logged-out probe on mount, and /auth/login 401s on a bad email while
- * the user is already sitting on the login page.
+ * redirect: /auth/me is the logged-out probe on mount.
  */
-const NO_REDIRECT_ON_401 = ['/auth/me', '/auth/login'];
+const NO_REDIRECT_ON_401 = ['/auth/me'];
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {

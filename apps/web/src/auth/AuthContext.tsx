@@ -13,7 +13,6 @@ export interface AuthContextValue {
   user: CurrentUser | null;
   /** True until the on-mount session probe resolves. Route guards must wait on this. */
   initializing: boolean;
-  login: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -47,17 +46,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const login = useCallback(async (email: string) => {
-    const loggedIn = await apiClient.post<CurrentUser>('/auth/login', { email });
-    setUser(loggedIn);
-  }, []);
-
   const logout = useCallback(async () => {
     await apiClient.post('/auth/logout');
     setUser(null);
   }, []);
 
-  return <AuthContext.Provider value={{ user, initializing, login, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, initializing, logout }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthContextValue {

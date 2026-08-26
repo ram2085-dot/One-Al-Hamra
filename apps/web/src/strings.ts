@@ -1,10 +1,7 @@
 export const strings = {
   appName: 'Enterprise Launchpad',
-  loginPrompt: 'Sign in to continue',
-  loginButton: 'Sign in',
+  signInWithSsoButton: 'Sign in with SSO',
   logoutButton: 'Sign out',
-  loginErrorMessage: 'Login failed. Check your email and try again.',
-  emailLabel: 'Email',
   catalogNav: 'Catalog',
   adminNav: 'Admin',
   searchPlaceholder: 'Search services…',

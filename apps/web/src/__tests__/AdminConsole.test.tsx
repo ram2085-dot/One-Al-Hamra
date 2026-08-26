@@ -13,7 +13,6 @@ const services = [
 const authValue: AuthContextValue = {
   user: { id: 'admin1', email: 'admin@launchpad.local', displayName: 'Ava Admin', department: 'IT', role: 'CATALOG_ADMIN' },
   initializing: false,
-  login: vi.fn(),
   logout: vi.fn(),
 };
 
