@@ -38,7 +38,7 @@ export function AliasEditor({
 
   return (
     <section aria-label={`${strings.aliasesHeading} ${serviceId}`} className="space-y-1">
-      <h3 className="font-heading text-xs font-semibold uppercase tracking-wider text-gray-600">{strings.aliasesHeading}</h3>
+      <h2 className="font-heading text-xs font-semibold uppercase tracking-wider text-gray-600">{strings.aliasesHeading}</h2>
       {aliases.length === 0 ? (
         <p className="text-sm text-gray-600">{strings.noAliasesMessage}</p>
       ) : (

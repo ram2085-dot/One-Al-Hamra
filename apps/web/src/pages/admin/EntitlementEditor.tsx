@@ -52,7 +52,7 @@ export function EntitlementEditor({
 
   return (
     <section aria-label={`${strings.entitlementsHeading} ${serviceId}`} className="space-y-1">
-      <h3 className="font-heading text-xs font-semibold uppercase tracking-wider text-gray-600">{strings.entitlementsHeading}</h3>
+      <h2 className="font-heading text-xs font-semibold uppercase tracking-wider text-gray-600">{strings.entitlementsHeading}</h2>
       {entitlements.length === 0 ? (
         <p className="text-sm text-gray-600">{strings.noEntitlementsMessage}</p>
       ) : (

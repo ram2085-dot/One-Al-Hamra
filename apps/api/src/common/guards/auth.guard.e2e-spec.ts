@@ -24,7 +24,7 @@ describe('AuthGuard (e2e)', () => {
     const res = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: 'admin@launchpad.local' });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(201);
   });
 
   it('GET /auth/me returns the safe user projection for a live session', async () => {
