@@ -23,6 +23,13 @@ services:
       DATABASE_URL: "postgresql://launchpad:launchpad_dev_only@postgres:5432/launchpad"
       JWT_SECRET: "dev-only-secret-change-me"
       PORT: 3001
+      OIDC_ISSUER_URL: "http://mock-idp:4000"
+      OIDC_CLIENT_ID: "portal"
+      OIDC_CLIENT_SECRET: "portal-dev-secret"
+      OIDC_REDIRECT_URI: "http://localhost:3001/auth/oidc/callback"
+      WEB_BASE_URL: "http://localhost:5173"
+      DEMO_APP_A_URL: "http://localhost:4001/login"
+      DEMO_APP_B_URL: "http://localhost:4002/login"
     ports:
       - "3001:3001"
     depends_on:
