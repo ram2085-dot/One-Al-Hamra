@@ -40,16 +40,6 @@ async function main() {
     },
   });
 
-  const helpDesk = await prisma.user.create({
-    data: {
-      email: 'helpdesk@launchpad.local',
-      displayName: 'Hank Desk',
-      department: 'IT',
-      role: Role.EMPLOYEE,
-      adUsername: 'hdesk',
-    },
-  });
-
   const expenseSystem = await prisma.service.create({
     data: {
       name: 'Finance Expense System',
@@ -122,7 +112,7 @@ async function main() {
 
   await prisma.favorite.create({ data: { userId: engEmployee.id, serviceId: codeRepo.id } });
 
-  console.log({ admin: admin.email, financeEmployee: financeEmployee.email, engEmployee: engEmployee.email, helpDesk: helpDesk.email, expenseSystem: expenseSystem.id, codeRepo: codeRepo.id, hrPortal: hrPortal.id });
+  console.log({ admin: admin.email, financeEmployee: financeEmployee.email, engEmployee: engEmployee.email, expenseSystem: expenseSystem.id, codeRepo: codeRepo.id, hrPortal: hrPortal.id });
 }
 
 main().finally(() => prisma.$disconnect());
