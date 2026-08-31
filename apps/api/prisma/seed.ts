@@ -50,6 +50,7 @@ async function main() {
       ownerId: admin.id,
       launchType: LaunchType.SSO,
       supportContact: 'finance-support@launchpad.local',
+      launchUrl: 'https://www.aajtak.in',
       entitlements: { create: [{ department: 'Finance' }] },
       aliases: { create: [{ alias: 'expenses' }, { alias: 'concur' }] },
     },
@@ -65,6 +66,7 @@ async function main() {
       ownerId: admin.id,
       launchType: LaunchType.SSO,
       supportContact: 'eng-support@launchpad.local',
+      launchUrl: 'https://www.aajtak.in',
       entitlements: { create: [{ department: 'Engineering' }] },
       aliases: { create: [{ alias: 'git' }, { alias: 'gitlab' }] },
     },
@@ -80,6 +82,7 @@ async function main() {
       ownerId: admin.id,
       launchType: LaunchType.CREDENTIAL,
       supportContact: 'hr-support@launchpad.local',
+      launchUrl: 'https://www.aajtak.in',
       entitlements: { create: [{ role: Role.EMPLOYEE }] },
       aliases: { create: [{ alias: 'workday' }, { alias: 'payroll' }] },
     },
@@ -95,6 +98,7 @@ async function main() {
       launchType: LaunchType.SSO,
       status: 'RETIRED',
       supportContact: 'hr-support@launchpad.local',
+      launchUrl: 'https://www.aajtak.in',
     },
   });
 
@@ -107,6 +111,7 @@ async function main() {
       ownerId: admin.id,
       launchType: LaunchType.SSO,
       supportContact: 'eng-support@launchpad.local',
+      launchUrl: 'https://www.aajtak.in',
     },
   });
 

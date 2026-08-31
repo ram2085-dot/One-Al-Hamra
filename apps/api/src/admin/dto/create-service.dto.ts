@@ -13,4 +13,5 @@ export class CreateServiceDto {
   @IsString() supportContact!: string;
   @IsOptional() @IsUrl() docsUrl?: string;
   @IsOptional() @IsUrl() healthCheckUrl?: string;
+  @IsOptional() @IsUrl() launchUrl?: string;
 }

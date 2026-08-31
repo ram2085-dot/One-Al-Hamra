@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { CatalogHome } from './pages/CatalogHome';
-import { ServiceDetail } from './pages/ServiceDetail';
 import { AppHeader } from './components/AppHeader';
 import { AdminConsole } from './pages/admin/AdminConsole';
 import { strings } from './strings';
@@ -45,7 +44,6 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<RequireAuth><CatalogHome /></RequireAuth>} />
-      <Route path="/services/:id" element={<RequireAuth><ServiceDetail /></RequireAuth>} />
       <Route path="/admin" element={<RequireRole role="ADMIN"><AdminConsole /></RequireRole>} />
     </Routes>
   );

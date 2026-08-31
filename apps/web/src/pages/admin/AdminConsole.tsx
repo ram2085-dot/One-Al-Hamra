@@ -5,12 +5,14 @@ import { ServiceForm } from './ServiceForm';
 import { EntitlementEditor, type AdminEntitlement } from './EntitlementEditor';
 import { AliasEditor, type AdminAlias } from './AliasEditor';
 import { SsoTargetEditor } from './SsoTargetEditor';
+import { LaunchUrlEditor } from './LaunchUrlEditor';
 import { strings } from '../../strings';
 
 interface AdminService {
   id: string; name: string; category: string; status: 'ACTIVE' | 'INACTIVE' | 'RETIRED';
   launchType: 'SSO' | 'CREDENTIAL';
   ssoTargetApp: 'DEMO_APP_A' | 'DEMO_APP_B' | null;
+  launchUrl: string | null;
   entitlements?: AdminEntitlement[];
   aliases?: AdminAlias[];
 }
@@ -67,6 +69,7 @@ export function AdminConsole() {
                   <td colSpan={4} className="space-y-2 bg-gray-50 p-3">
                     <EntitlementEditor serviceId={s.id} entitlements={s.entitlements} onChanged={reload} />
                     <AliasEditor serviceId={s.id} aliases={s.aliases} onChanged={reload} />
+                    <LaunchUrlEditor serviceId={s.id} launchUrl={s.launchUrl} onChanged={reload} />
                     {s.launchType === 'SSO' && (
                       <SsoTargetEditor serviceId={s.id} ssoTargetApp={s.ssoTargetApp} onChanged={reload} />
                     )}
