@@ -27,7 +27,7 @@ describe('/admin/services RBAC (e2e)', () => {
     await agent.get('/admin/services').expect(403);
   });
 
-  it('allows CATALOG_ADMIN and returns retired/inactive services too', async () => {
+  it('allows ADMIN and returns retired/inactive services too', async () => {
     const agent = request.agent(app.getHttpServer());
     await agent.post('/auth/dev-login').send({ email: 'admin@launchpad.local' });
     const res = await agent.get('/admin/services');
@@ -128,10 +128,10 @@ describe('entitlement changes propagate immediately', () => {
     });
     createdServiceIds.push(created.body.id);
 
-    // "Engineering service owners only" — the seeded Engineering user is a plain EMPLOYEE.
+    // "Engineering admins only" — the seeded Engineering user is a plain EMPLOYEE.
     await adminAgent
       .post(`/admin/services/${created.body.id}/entitlements`)
-      .send({ department: 'Engineering', role: 'SERVICE_OWNER' })
+      .send({ department: 'Engineering', role: 'ADMIN' })
       .expect(201);
 
     const engAgent = request.agent(app.getHttpServer());

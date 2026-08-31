@@ -9,7 +9,7 @@ export interface AdminEntitlement {
   group: string | null;
 }
 
-/** "Finance" / "Any department · SERVICE_OWNER" — spells out that a null field is a wildcard. */
+/** "Finance" / "Any department · ADMIN" — spells out that a null field is a wildcard. */
 function describeEntitlement(entitlement: AdminEntitlement): string {
   return [
     entitlement.department ?? strings.anyDepartmentLabel,

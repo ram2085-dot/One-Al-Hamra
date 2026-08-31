@@ -46,7 +46,7 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<RequireAuth><CatalogHome /></RequireAuth>} />
       <Route path="/services/:id" element={<RequireAuth><ServiceDetail /></RequireAuth>} />
-      <Route path="/admin" element={<RequireRole role="CATALOG_ADMIN"><AdminConsole /></RequireRole>} />
+      <Route path="/admin" element={<RequireRole role="ADMIN"><AdminConsole /></RequireRole>} />
     </Routes>
   );
 }

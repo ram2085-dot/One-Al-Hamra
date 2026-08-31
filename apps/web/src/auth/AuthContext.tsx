@@ -6,7 +6,7 @@ export interface CurrentUser {
   email: string;
   displayName: string;
   department: string;
-  role: 'EMPLOYEE' | 'SERVICE_OWNER' | 'CATALOG_ADMIN' | 'HELP_DESK' | 'SECURITY_ADMIN';
+  role: 'EMPLOYEE' | 'ADMIN';
 }
 
 export interface AuthContextValue {

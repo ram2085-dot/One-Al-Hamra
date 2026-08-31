@@ -9,7 +9,7 @@ Internal Service Catalog & SSO Portal. See `Plan.md` and `docs/specs/phase-1-cor
 4. `cd apps/mock-idp && cp .env.example .env && npm install && npm run start:dev`
 5. `cd apps/mock-target-apps/demo-app-a && cp .env.example .env && npm install && npm run start:dev`
 6. `cd apps/mock-target-apps/demo-app-b && cp .env.example .env && npm install && npm run start:dev`
-7. Open http://localhost:5173, click "Sign in with SSO," and pick a user (e.g. `admin@launchpad.local` for CATALOG_ADMIN, or `finance.employee@launchpad.local` / `eng.employee@launchpad.local` for EMPLOYEE) from the mock IdP's one-click picker at `localhost:4000`.
+7. Open http://localhost:5173, click "Sign in with SSO," and pick a user (e.g. `admin@launchpad.local` for ADMIN, or `finance.employee@launchpad.local` / `eng.employee@launchpad.local` for EMPLOYEE) from the mock IdP's one-click picker at `localhost:4000`.
 
 ## Run via Docker Compose (full stack)
 1. `docker compose up --build -d`

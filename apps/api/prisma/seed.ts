@@ -15,7 +15,7 @@ async function main() {
       email: 'admin@launchpad.local',
       displayName: 'Ava Admin',
       department: 'IT',
-      role: Role.CATALOG_ADMIN,
+      role: Role.ADMIN,
       adUsername: 'aadmin',
     },
   });
@@ -45,7 +45,7 @@ async function main() {
       email: 'helpdesk@launchpad.local',
       displayName: 'Hank Desk',
       department: 'IT',
-      role: Role.HELP_DESK,
+      role: Role.EMPLOYEE,
       adUsername: 'hdesk',
     },
   });

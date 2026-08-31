@@ -79,11 +79,16 @@ Full per-phase field detail and migrations are defined in each phase's own spec 
 
 ### 2.4 RBAC Roles
 
+**Simplified (2026-08-31) to two roles** — the original five-role sketch below (Employee / Service
+Owner / Catalog Admin / Help Desk / Security Admin) was never load-bearing beyond Catalog Admin:
+no phase built role-gated behavior for Service Owner, Help Desk, or Security Admin. Collapsed to
+avoid maintaining distinctions the product doesn't act on:
+
 - **Employee** — default; sees only entitled services, manages own credentials/favorites.
-- **Service Owner** — edits metadata for services they own.
-- **Catalog Admin** — full CRUD over the catalog, entitlements, launch config (FR-09/10).
-- **Help Desk** — read-only support view (FR-26): a user's entitlements and launch/failure history, never credential values.
-- **Security Admin** — reviews audit logs, vault configuration (Phase 3).
+- **Admin** — full CRUD over the catalog, entitlements, launch config (FR-09/10); the only
+  privileged role in the system. Later phases that need a narrower or additional role (e.g. a
+  real Help Desk support view for FR-26) reintroduce it deliberately when they actually build
+  role-specific behavior, rather than carrying an unused role forward speculatively.
 
 ### 2.5 Cross-Cutting Concerns
 

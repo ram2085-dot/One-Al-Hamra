@@ -10,7 +10,7 @@ import { AliasDto } from './dto/alias.dto';
 import type { User } from '@prisma/client';
 
 @Controller('admin/services')
-@Roles(Role.CATALOG_ADMIN)
+@Roles(Role.ADMIN)
 export class AdminController {
   constructor(private adminService: AdminService) {}
 

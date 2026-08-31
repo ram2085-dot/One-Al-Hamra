@@ -19,7 +19,7 @@ export function AppHeader() {
       </div>
       <nav className="flex items-center gap-6" aria-label="Main">
         <NavLink to="/" end className={navLinkClass}>{strings.catalogNav}</NavLink>
-        {user.role === 'CATALOG_ADMIN' && <NavLink to="/admin" className={navLinkClass}>{strings.adminNav}</NavLink>}
+        {user.role === 'ADMIN' && <NavLink to="/admin" className={navLinkClass}>{strings.adminNav}</NavLink>}
         <button type="button" onClick={() => logout()} className="text-xs font-heading font-semibold uppercase tracking-wider text-white/80 hover:text-white">
           {strings.logoutButton}
         </button>

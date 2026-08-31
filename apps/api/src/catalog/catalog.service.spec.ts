@@ -69,9 +69,9 @@ describe('CatalogService.listForUser', () => {
     const user = { id: 'u1', department: 'Finance', role: 'EMPLOYEE' } as any;
     const where = await capturedEntitlementWhere(user);
 
-    // "Finance service owners only" — must not be visible to an ordinary Finance employee.
-    expect(matches(where, { department: 'Finance', role: 'SERVICE_OWNER', group: null })).toBe(false);
-    // ...nor to a SERVICE_OWNER in another department (covered by the department half).
+    // "Finance admins only" — must not be visible to an ordinary Finance employee.
+    expect(matches(where, { department: 'Finance', role: 'ADMIN', group: null })).toBe(false);
+    // ...nor to an ADMIN in another department (covered by the department half).
     expect(matches(where, { department: 'Engineering', role: 'EMPLOYEE', group: null })).toBe(false);
     // A row scoped to exactly this user's department+role does match.
     expect(matches(where, { department: 'Finance', role: 'EMPLOYEE', group: null })).toBe(true);

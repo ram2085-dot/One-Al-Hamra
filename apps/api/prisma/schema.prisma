@@ -9,10 +9,7 @@ datasource db {
 
 enum Role {
   EMPLOYEE
-  SERVICE_OWNER
-  CATALOG_ADMIN
-  HELP_DESK
-  SECURITY_ADMIN
+  ADMIN
 }
 
 enum LaunchType {
