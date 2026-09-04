@@ -4,6 +4,7 @@ import { LoginPage } from './pages/LoginPage';
 import { CatalogHome } from './pages/CatalogHome';
 import { AppHeader } from './components/AppHeader';
 import { AdminConsole } from './pages/admin/AdminConsole';
+import { VaultManager } from './pages/VaultManager';
 import { strings } from './strings';
 
 /**
@@ -44,6 +45,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<RequireAuth><CatalogHome /></RequireAuth>} />
+      <Route path="/services/:id/credentials" element={<RequireAuth><VaultManager /></RequireAuth>} />
       <Route path="/admin" element={<RequireRole role="ADMIN"><AdminConsole /></RequireRole>} />
     </Routes>
   );

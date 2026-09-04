@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { ServiceTile, type ServiceSummary } from '../components/ServiceTile';
 import { SearchBar } from '../components/SearchBar';
@@ -8,6 +9,7 @@ import { ErrorState } from '../components/ErrorState';
 import { strings } from '../strings';
 
 export function CatalogHome() {
+  const navigate = useNavigate();
   const [allServices, setAllServices] = useState<ServiceSummary[] | null>(null);
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState<ServiceSummary[] | null>(null);
@@ -97,6 +99,10 @@ export function CatalogHome() {
    * Launch button used to trigger; only the navigation destination changed.
    */
   async function launchService(service: ServiceSummary) {
+    if (service.launchType === 'CREDENTIAL') {
+      navigate(`/services/${service.id}/credentials`);
+      return;
+    }
     if (!service.launchUrl) {
       setLaunchError(strings.launchNotConfiguredHint);
       return;
