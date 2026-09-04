@@ -135,4 +135,11 @@ export class VaultService {
     ]);
     await this.audit.record(user.id, 'CREDENTIAL_UPDATE', serviceId, { action: 'set-default', credentialId });
   }
+
+  async revealCredential(user: User, serviceId: string, credentialId: string): Promise<{ username: string; password: string }> {
+    await this.catalog.assertEntitled(user, serviceId);
+    const row = await this.ownedOrThrow(user.id, serviceId, credentialId);
+    await this.audit.record(user.id, 'CREDENTIAL_REVEAL', serviceId, { credentialId });
+    return { username: this.crypto.decrypt(row.encUsername), password: this.crypto.decrypt(row.encPassword) };
+  }
 }

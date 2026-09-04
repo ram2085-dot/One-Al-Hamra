@@ -106,4 +106,19 @@ describe('Credential CRUD (e2e)', () => {
     expect(list.body.find((x: any) => x.id === b.body.id).isDefault).toBe(true);
     expect(list.body.find((x: any) => x.id === a.body.id).isDefault).toBe(false);
   });
+
+  it('reveal returns the plaintext only with a valid token, and logs CREDENTIAL_REVEAL', async () => {
+    const agent = await session();
+    let token = await reauth(agent);
+    const c = await agent.post(`/vault/credentials/${hrServiceId}`).set('X-Reauth-Token', token).send({ username: 'jdoe', password: 'p@ss' }).expect(201);
+
+    await agent.get(`/vault/credentials/${hrServiceId}/${c.body.id}/reveal`).expect(401); // no token
+
+    token = await reauth(agent);
+    const revealed = await agent.get(`/vault/credentials/${hrServiceId}/${c.body.id}/reveal`).set('X-Reauth-Token', token).expect(200);
+    expect(revealed.body).toEqual({ username: 'jdoe', password: 'p@ss' });
+
+    const count = await prisma.auditLog.count({ where: { userId: empId, eventType: 'CREDENTIAL_REVEAL', serviceId: hrServiceId } });
+    expect(count).toBe(1);
+  });
 });

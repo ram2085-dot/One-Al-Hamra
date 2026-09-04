@@ -25,6 +25,17 @@ export class VaultController {
     return this.vault.reauth(user, serviceId, dto.adPassword);
   }
 
+  @Get(':serviceId/:credentialId/reveal')
+  reveal(
+    @CurrentUser() user: User,
+    @Param('serviceId') serviceId: string,
+    @Param('credentialId') credentialId: string,
+    @Headers('x-reauth-token') reauthToken: string | undefined,
+  ) {
+    this.requireReauth(reauthToken, user.id, serviceId);
+    return this.vault.revealCredential(user, serviceId, credentialId);
+  }
+
   @Get(':serviceId')
   list(@CurrentUser() user: User, @Param('serviceId') serviceId: string) {
     return this.vault.listForService(user, serviceId);

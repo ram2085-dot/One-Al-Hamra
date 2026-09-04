@@ -108,4 +108,13 @@ describe('VaultService — credentials', () => {
     expect(prisma.credential.delete).toHaveBeenCalledWith({ where: { id: 'c1' } });
     expect(prisma.credential.update).toHaveBeenCalledWith({ where: { id: 'c2' }, data: { isDefault: true } });
   });
+
+  it('revealCredential decrypts both fields and writes a CREDENTIAL_REVEAL audit row', async () => {
+    prisma.credential.findFirst.mockResolvedValue({
+      id: 'c1', userId: 'u1', serviceId: 's1', encUsername: 'enc(jdoe)', encPassword: 'enc(s3cret)',
+    });
+    const out = await service.revealCredential(user, 's1', 'c1');
+    expect(out).toEqual({ username: 'jdoe', password: 's3cret' });
+    expect(audit.record).toHaveBeenCalledWith('u1', 'CREDENTIAL_REVEAL', 's1', expect.objectContaining({ credentialId: 'c1' }));
+  });
 });
