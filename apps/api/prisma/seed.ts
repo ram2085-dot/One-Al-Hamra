@@ -11,6 +11,10 @@ async function main() {
   await prisma.service.deleteMany();
   await prisma.user.deleteMany();
   await prisma.adAccount.deleteMany();
+  // vault schema has no cross-schema FKs, so these are not cascaded by the deletes above — clear
+  // them explicitly or every re-seed permanently orphans all stored credentials / lockout rows.
+  await prisma.credential.deleteMany();
+  await prisma.credentialVaultLockout.deleteMany();
 
   const admin = await prisma.user.create({
     data: {

@@ -16,6 +16,10 @@ app.use(session({ secret: process.env.SESSION_SECRET ?? 'dev', resave: false, sa
 
 const page = (body: string) => `<!doctype html><html><head><meta charset="utf-8"><title>${APP_NAME}</title></head><body>${body}</body></html>`;
 
+/** Escapes HTML-significant characters so a reflected `username` / `user` value stays inert. */
+const esc = (s: string) =>
+  s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+
 app.get('/login', (_req, res) => {
   res.type('html').send(
     page(
@@ -31,12 +35,13 @@ app.post('/login', (req, res) => {
   const { username, password, failureRedirect } = req.body as Record<string, string>;
   if (username === EXPECTED_USER && password === EXPECTED_PASS) {
     (req.session as any).user = username;
-    res.type('html').send(page(`<h1>${APP_NAME}</h1><p>You're signed in as ${username}. No second login prompt.</p>`));
+    res.type('html').send(page(`<h1>${APP_NAME}</h1><p>You're signed in as ${esc(username)}. No second login prompt.</p>`));
     return;
   }
   // Failed native login → hand control back to the portal's FR-17 recovery flow, but only to a
   // trusted portal URL (guards against an open redirect if this field were ever attacker-set).
-  if (failureRedirect && failureRedirect.startsWith(WEB_BASE_URL)) {
+  // Require the `/` after the origin so `http://localhost:5173.evil.com/...` is rejected.
+  if (failureRedirect && failureRedirect.startsWith(WEB_BASE_URL + '/')) {
     res.redirect(failureRedirect);
     return;
   }
@@ -46,7 +51,7 @@ app.post('/login', (req, res) => {
 app.get('/', (req, res) => {
   const user = (req.session as any).user;
   if (!user) return res.redirect('/login');
-  res.type('html').send(page(`<h1>${APP_NAME}</h1><p>Signed in as ${user}</p>`));
+  res.type('html').send(page(`<h1>${APP_NAME}</h1><p>Signed in as ${esc(user)}</p>`));
 });
 
 app.listen(PORT, () => {

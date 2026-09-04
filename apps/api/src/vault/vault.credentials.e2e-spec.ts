@@ -4,9 +4,10 @@ import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { AppModule } from '../app.module';
 
-// Uses eng.employee (not finance.employee) so this suite's lockout/credential row
-// cleanup never races vault.reauth.e2e-spec.ts, which mutates finance.employee lockout
-// state and runs in a parallel Jest worker.
+// Uses eng.employee (not finance.employee) so this suite's lockout/credential row cleanup
+// stays isolated from vault.reauth.e2e-spec.ts, which mutates finance.employee lockout state.
+// api e2e now runs serially (jest-e2e.config.js maxWorkers: 1) and each run re-seeds first, but
+// keeping the suites on distinct users keeps that isolation from depending on test order.
 const EMP_EMAIL = 'eng.employee@launchpad.local';
 
 describe('Credential CRUD (e2e)', () => {

@@ -6,6 +6,15 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/guards/auth.guard';
 import { CredentialLaunchService } from './credential-launch.service';
 import { LaunchTokenStore } from './launch-token.store';
+import { LaunchDto } from './dto/launch.dto';
+
+/** Plain-language 410-style page shown when the launch link can't be honoured — an expired /
+ *  unknown token, or a missing LEGACY_APP_LOGIN_URL. Never a raw 500 / stack (spec §11). */
+const helpDeskPage = (title: string, heading: string) =>
+  `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title></head><body>` +
+  `<h1>${heading}</h1>` +
+  `<p>Go back to the portal and click Launch again. If it keeps happening, contact the help desk at helpdesk@launchpad.local.</p>` +
+  `</body></html>`;
 
 /** Escapes the five characters that could break out of a double-quoted HTML attribute or
  *  inject markup, so a credential containing `"` or `<` stays inert inside the form. */
@@ -29,9 +38,9 @@ export class CredentialLaunchController {
   resolve(
     @CurrentUser() user: User,
     @Param('serviceId') serviceId: string,
-    @Body('credentialId') credentialId: string | undefined,
+    @Body() dto: LaunchDto,
   ) {
-    return this.launch.resolve(user, serviceId, credentialId);
+    return this.launch.resolve(user, serviceId, dto.credentialId);
   }
 
   @Public()
@@ -41,15 +50,17 @@ export class CredentialLaunchController {
     res.setHeader('Cache-Control', 'no-store');
     res.type('html');
     if (!payload) {
-      res.status(410).send(
-        `<!doctype html><html><head><meta charset="utf-8"><title>Launch link expired</title></head><body>` +
-          `<h1>This launch link has expired.</h1>` +
-          `<p>Go back to the portal and click Launch again. If it keeps happening, contact the help desk at helpdesk@launchpad.local.</p>` +
-          `</body></html>`,
-      );
+      res.status(410).send(helpDeskPage('Launch link expired', 'This launch link has expired.'));
       return;
     }
-    const action = this.config.get<string>('LEGACY_APP_LOGIN_URL')!;
+    const action = this.config.get<string>('LEGACY_APP_LOGIN_URL');
+    if (!action) {
+      // Defensive: the startup check in main.ts already fails fast on an unset LEGACY_APP_LOGIN_URL.
+      // If it is ever missing here, render the same plain-language page rather than letting
+      // escapeHtml(undefined) throw a raw 500 + stack.
+      res.status(410).send(helpDeskPage('Launch unavailable', 'This launch is temporarily unavailable.'));
+      return;
+    }
     res.status(200).send(
       `<!doctype html><html><head><meta charset="utf-8"><title>Signing you in…</title></head>` +
         `<body onload="document.forms[0].submit()">` +

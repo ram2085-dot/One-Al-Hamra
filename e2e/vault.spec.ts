@@ -7,21 +7,21 @@ import { loginAs, openHrCredentials, addCredential } from './helpers';
 // Seed data cross-checked against apps/api/prisma/seed.ts (HR Self-Service Portal,
 // launchType CREDENTIAL, entitled to every EMPLOYEE; finance.employee is one).
 
-// All three scenarios drive the same user + same service + same DB, so they must not run in
-// parallel workers against each other — the per-test "clean slate" delete in beforeEach would
-// race a sibling's credential writes. (catalog.spec / admin.spec touch neither HR credentials
-// nor the HR portal's entitlement, so cross-file parallelism is still fine.)
+// All three scenarios drive the same user + same service + same DB, so they run serially against
+// each other — the per-test setup in beforeEach would otherwise race a sibling's credential writes.
+// (catalog.spec / admin.spec touch neither HR credentials nor the HR portal's entitlement, so
+// cross-file parallelism is still fine.)
 test.describe.configure({ mode: 'serial' });
 
 test.beforeEach(async ({ page }) => {
   await loginAs(page, 'finance.employee@launchpad.local');
   await openHrCredentials(page);
-  // Clean slate. seed.ts does NOT clear the `vault.Credential` table (no cross-schema FK), so rows
-  // survive the re-seed and pile up across runs; delete whatever is here. Gate each pass on the row
-  // count actually dropping (not a fixed sleep) so a slow delete/refetch can't leave a row behind —
-  // a leftover default credential would silently change which one the next test launches.
+  // `npm run test:e2e` re-seeds first, and seed.ts now clears the vault.Credential table, so we
+  // normally start clean. Keep a small defensive sweep (cap 3) in case a prior test in this serial
+  // file left a row behind — a leftover default credential would change which one the next test
+  // launches. Gate each pass on the row count actually dropping, not a fixed sleep.
   const deleteButtons = page.getByRole('button', { name: /^delete$/i });
-  for (let guard = 0; guard < 25; guard++) {
+  for (let guard = 0; guard < 3; guard++) {
     const before = await deleteButtons.count();
     if (before === 0) break;
     await deleteButtons.first().click();

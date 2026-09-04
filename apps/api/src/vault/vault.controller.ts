@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Headers, HttpCode, Param, Patch, Post, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, Headers, HttpCode, Param, Patch, Post, UnauthorizedException } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CreateCredentialDto } from './dto/create-credential.dto';
@@ -26,6 +26,8 @@ export class VaultController {
   }
 
   @Get(':serviceId/:credentialId/reveal')
+  @Header('Cache-Control', 'no-store')
+  @Header('Pragma', 'no-cache')
   reveal(
     @CurrentUser() user: User,
     @Param('serviceId') serviceId: string,

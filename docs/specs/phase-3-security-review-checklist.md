@@ -15,25 +15,27 @@ the file:line evidence.
       (`vault.service.ts:80-81, 101, 103`); the rest are `*.spec.ts` fixtures.
 - [x] `GET /vault/credentials/:serviceId` (list) response contains no `password` / `encPassword`
       key — confirmed by `vault.credentials.e2e-spec.ts` "no password" assertions.
-      Evidence: handler `apps/api/src/vault/vault.controller.ts:39-42` -> `VaultService.listForService`
-      -> `toListItem` (`apps/api/src/vault/vault.service.ts:48-66`) which projects only
+      Evidence: handler `apps/api/src/vault/vault.controller.ts:41-44` -> `VaultService.listForService`
+      -> `toListItem` (`apps/api/src/vault/vault.service.ts:48-57`) which projects only
       `{id,label,username,isDefault,lastRotatedAt,passwordExpiresAt}` — no password field.
-      Assertions: `apps/api/src/vault/vault.credentials.e2e-spec.ts:65` (`created.body.password` undefined),
-      `:69` (`JSON.stringify(list.body)).not.toContain('s3cret')`).
+      Assertions: `apps/api/src/vault/vault.credentials.e2e-spec.ts:66` (`created.body.password` undefined),
+      `:71` (`JSON.stringify(list.body)).not.toContain('s3cret')`).
 - [x] The decrypted password reaches the browser only via `GET .../reveal` (an explicit user
       action, re-auth-gated) and the inject page. It is never in a `/catalog`, `/vault` list, or
       `/credential-launch` POST JSON response.
-      Evidence: reveal — `apps/api/src/vault/vault.controller.ts:28-37` (re-auth gate at `:35`),
-      `vault.service.ts:139-144`. Inject page — `apps/api/src/credential-launch/credential-launch.controller.ts:37-64`
+      Evidence: reveal — `apps/api/src/vault/vault.controller.ts:28-39` (re-auth gate at `:37`),
+      `vault.service.ts:139-144`. Inject page — `apps/api/src/credential-launch/credential-launch.controller.ts:46-75`
       (hidden form fields, HTML not JSON). `credential-launch` POST returns only `{ injectUrl }`
       (`credential-launch.service.ts:21,38`). `/catalog` projections carry no credential fields
       (`apps/api/src/catalog/catalog.service.ts:100-110`).
 - [x] Inject page sets `Cache-Control: no-store` (`credential-launch.controller.ts`) and is
       single-use (`LaunchTokenStore.consume` deletes on first read).
-      Evidence: `apps/api/src/credential-launch/credential-launch.controller.ts:40` (`res.setHeader('Cache-Control', 'no-store')`,
-      set before the expired-token branch and the success branch);
-      `apps/api/src/credential-launch/launch-token.store.ts:24-30` (`consume` calls
-      `this.entries.delete(token)` before the expiry check, so the payload is gone after the first read).
+      Evidence: `apps/api/src/credential-launch/credential-launch.controller.ts:50` (`res.setHeader('Cache-Control', 'no-store')`,
+      set before the expired-token, missing-config, and success branches);
+      `apps/api/src/credential-launch/launch-token.store.ts:28-34` (`consume` calls
+      `this.entries.delete(token)` at `:31` before the expiry check, so the payload is gone after the
+      first read; `mint` also schedules a `setTimeout` eviction at `:24` so an abandoned token's
+      decrypted payload can't outlive its TTL in the heap).
 - [x] No `console.log` / logger call anywhere in `vault/` or `credential-launch/` takes a
       decrypted value or a raw DTO password.
       Evidence: `grep -rn "console\.\|Logger\|logger\|\.log(" apps/api/src/vault apps/api/src/credential-launch`
@@ -42,15 +44,15 @@ the file:line evidence.
 ## Re-auth gate
 - [x] Reveal, create, update, delete each call `requireReauth(...)` before touching data
       (`vault.controller.ts`).
-      Evidence: `apps/api/src/vault/vault.controller.ts:35` (reveal), `:51` (create), `:75` (update),
-      `:87` (delete) — each is the first statement in the handler, before the `this.vault.*` call.
+      Evidence: `apps/api/src/vault/vault.controller.ts:37` (reveal), `:53` (create), `:77` (update),
+      `:89` (delete) — each is the first statement in the handler, before the `this.vault.*` call.
       `requireReauth` defined at `:17-21` throws `UnauthorizedException` when the token is missing
-      or `ReauthTokenStore.consume` returns false. (`makeDefault`, `:57-65`, is a non-secret
+      or `ReauthTokenStore.consume` returns false. (`makeDefault`, `:59-67`, is a non-secret
       metadata flip and is intentionally not gated — spec §6.)
 - [x] `reauthToken` is single-use (`ReauthTokenStore.consume` deletes unconditionally) and scoped
       to `{userId, serviceId}` — a token minted for service A can't act on service B.
-      Evidence: `apps/api/src/vault/reauth-token.store.ts:30` (`this.entries.delete(token)` runs
-      before the expiry/scope checks — unconditional), `:32` (`entry.userId === userId && entry.serviceId === serviceId`).
+      Evidence: `apps/api/src/vault/reauth-token.store.ts:33` (`this.entries.delete(token)` runs
+      before the expiry/scope checks — unconditional), `:35` (`entry.userId === userId && entry.serviceId === serviceId`).
       Scope threaded from the controller: `vault.controller.ts:18` passes `userId, serviceId`;
       token issued with `{ userId: user.id, serviceId }` at `vault.service.ts:45`.
 - [x] 5 failed re-auths -> `423` with a retry window (`LockoutService`), verified by
@@ -68,7 +70,7 @@ the file:line evidence.
       `:97` (update), `:113` (delete), `:130` (setDefault), `:140` (reveal);
       `apps/api/src/credential-launch/credential-launch.service.ts:22` (resolve).
       `assertEntitled` throws `NotFoundException` (404, never 403) —
-      `apps/api/src/catalog/catalog.service.ts:112-122`.
+      `apps/api/src/catalog/catalog.service.ts:116-123`.
 - [x] Every credential lookup is filtered by `userId: user.id` — no admin or cross-user path.
       Evidence: `apps/api/src/vault/vault.service.ts:62` (`findMany where userId`), `:71` (create's
       existing-count query), `:91` (`ownedOrThrow` — `findFirst where { id, userId, serviceId }`,
@@ -104,5 +106,5 @@ the file:line evidence.
 
 ## Result
 
-All 16 lines ticked with `file:line` evidence on branch `phase-3-credential-vault`. No line failed;
+All 13 lines ticked with `file:line` evidence on branch `phase-3-credential-vault`. No line failed;
 no production-code changes were required by this review.

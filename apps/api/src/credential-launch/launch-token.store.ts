@@ -18,6 +18,10 @@ export class LaunchTokenStore {
   mint(payload: Payload): string {
     const token = randomBytes(32).toString('hex');
     this.entries.set(token, { payload, expiresAt: Date.now() + TTL_MS });
+    // Proactively evict an abandoned launch so a decrypted username+password can't sit in the
+    // process heap past its TTL. consume() still deletes early on a normal launch; deleting an
+    // already-gone key is a no-op. .unref() keeps this timer from holding the process open.
+    setTimeout(() => this.entries.delete(token), TTL_MS).unref();
     return token;
   }
 

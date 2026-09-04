@@ -4,9 +4,10 @@ import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { AppModule } from '../app.module';
 
-// Uses eng.employee (not finance.employee) so this suite's successful reauth never
-// resets finance.employee's failure count mid-run — vault.reauth.e2e-spec.ts asserts a
-// 5-strikes 423 lockout for finance.employee from a parallel Jest worker.
+// Uses eng.employee (not finance.employee) so this suite's successful reauth never resets
+// finance.employee's failure count — vault.reauth.e2e-spec.ts asserts a 5-strikes 423 lockout
+// for finance.employee. api e2e runs serially (jest-e2e.config.js maxWorkers: 1) and re-seeds
+// each run; keeping the suites on distinct users keeps that isolation order-independent.
 const EMP_EMAIL = 'eng.employee@launchpad.local';
 
 describe('credential-launch inject page (e2e)', () => {

@@ -4,7 +4,7 @@ Internal Service Catalog & SSO Portal. See `Plan.md` and `docs/specs/phase-1-cor
 
 ## Run locally (dev, hot reload)
 1. `npm run db:up`
-2. `cd apps/api && cp ../../.env.example .env && npm install && npx prisma migrate dev && npx prisma db seed && npm run start:dev`
+2. `cd apps/api && cp .env.example .env && npm install && npx prisma migrate dev && npx prisma db seed && npm run start:dev`
 3. `cd apps/web && npm install && npm run dev`
 4. `cd apps/mock-idp && cp .env.example .env && npm install && npm run start:dev`
 5. `cd apps/mock-target-apps/demo-app-a && cp .env.example .env && npm install && npm run start:dev`

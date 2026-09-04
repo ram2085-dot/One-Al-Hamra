@@ -21,6 +21,9 @@ export class ReauthTokenStore {
   issue(scope: { userId: string; serviceId: string }): string {
     const token = randomBytes(32).toString('hex');
     this.entries.set(token, { ...scope, expiresAt: Date.now() + TTL_MS });
+    // Evict an abandoned token rather than letting it linger in the heap until the next issue()
+    // for the same key. consume() still deletes early; .unref() keeps the process from staying up.
+    setTimeout(() => this.entries.delete(token), TTL_MS).unref();
     return token;
   }
 
