@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import type { Credential, User } from '@prisma/client';
 import { CatalogService } from '../catalog/catalog.service';
 import { AuditService } from '../audit/audit.service';
@@ -8,6 +8,7 @@ import { CredentialCryptoService } from './credential-crypto.service';
 import { LockoutService } from './lockout.service';
 import { ReauthTokenStore } from './reauth-token.store';
 import { CreateCredentialDto } from './dto/create-credential.dto';
+import { UpdateCredentialDto } from './dto/update-credential.dto';
 
 export interface CredentialListItem {
   id: string;
@@ -84,5 +85,54 @@ export class VaultService {
     });
     await this.audit.record(user.id, 'CREDENTIAL_UPDATE', serviceId, { action: 'create', credentialId: row.id });
     return this.toListItem(row);
+  }
+
+  private async ownedOrThrow(userId: string, serviceId: string, credentialId: string) {
+    const row = await this.prisma.credential.findFirst({ where: { id: credentialId, userId, serviceId } });
+    if (!row) throw new NotFoundException('Credential not found');
+    return row;
+  }
+
+  async updateCredential(user: User, serviceId: string, credentialId: string, dto: UpdateCredentialDto): Promise<CredentialListItem> {
+    await this.catalog.assertEntitled(user, serviceId);
+    await this.ownedOrThrow(user.id, serviceId, credentialId);
+    const data: Record<string, unknown> = {};
+    if (dto.label !== undefined) data.label = dto.label;
+    if (dto.username !== undefined) data.encUsername = this.crypto.encrypt(dto.username);
+    if (dto.password !== undefined) {
+      data.encPassword = this.crypto.encrypt(dto.password);
+      data.lastRotatedAt = new Date();
+    }
+    if (dto.passwordExpiresAt !== undefined) data.passwordExpiresAt = dto.passwordExpiresAt ? new Date(dto.passwordExpiresAt) : null;
+    const row = await this.prisma.credential.update({ where: { id: credentialId }, data });
+    await this.audit.record(user.id, 'CREDENTIAL_UPDATE', serviceId, { action: 'update', credentialId });
+    return this.toListItem(row);
+  }
+
+  async deleteCredential(user: User, serviceId: string, credentialId: string): Promise<void> {
+    await this.catalog.assertEntitled(user, serviceId);
+    const row = await this.ownedOrThrow(user.id, serviceId, credentialId);
+    await this.prisma.credential.delete({ where: { id: credentialId } });
+    if (row.isDefault) {
+      const remaining = await this.prisma.credential.findMany({
+        where: { userId: user.id, serviceId },
+        orderBy: { createdAt: 'asc' },
+        take: 1,
+      });
+      if (remaining[0]) {
+        await this.prisma.credential.update({ where: { id: remaining[0].id }, data: { isDefault: true } });
+      }
+    }
+    await this.audit.record(user.id, 'CREDENTIAL_UPDATE', serviceId, { action: 'delete', credentialId });
+  }
+
+  async setDefault(user: User, serviceId: string, credentialId: string): Promise<void> {
+    await this.catalog.assertEntitled(user, serviceId);
+    await this.ownedOrThrow(user.id, serviceId, credentialId);
+    await this.prisma.$transaction([
+      this.prisma.credential.updateMany({ where: { userId: user.id, serviceId }, data: { isDefault: false } }),
+      this.prisma.credential.update({ where: { id: credentialId }, data: { isDefault: true } }),
+    ]);
+    await this.audit.record(user.id, 'CREDENTIAL_UPDATE', serviceId, { action: 'set-default', credentialId });
   }
 }

@@ -78,4 +78,32 @@ describe('Credential CRUD (e2e)', () => {
     await agent.post(`/vault/credentials/${hrServiceId}`).set('X-Reauth-Token', token).send({ username: 'a', password: 'b' }).expect(201);
     await agent.post(`/vault/credentials/${hrServiceId}`).set('X-Reauth-Token', token).send({ username: 'c', password: 'd' }).expect(401);
   });
+
+  it('PATCH updates a credential and DELETE removes it, both requiring a fresh token each', async () => {
+    const agent = await session();
+    let token = await reauth(agent);
+    const c = await agent.post(`/vault/credentials/${hrServiceId}`).set('X-Reauth-Token', token).send({ username: 'u', password: 'p' }).expect(201);
+
+    token = await reauth(agent);
+    await agent.patch(`/vault/credentials/${hrServiceId}/${c.body.id}`).set('X-Reauth-Token', token).send({ label: 'Renamed' }).expect(200);
+
+    token = await reauth(agent);
+    await agent.delete(`/vault/credentials/${hrServiceId}/${c.body.id}`).set('X-Reauth-Token', token).expect(204);
+    await agent.get(`/vault/credentials/${hrServiceId}`).expect(200).expect([]);
+  });
+
+  it('PATCH .../default needs no re-auth token and moves the default flag', async () => {
+    const agent = await session();
+    let token = await reauth(agent);
+    const a = await agent.post(`/vault/credentials/${hrServiceId}`).set('X-Reauth-Token', token).send({ label: 'A', username: 'a', password: 'a' }).expect(201);
+    token = await reauth(agent);
+    const b = await agent.post(`/vault/credentials/${hrServiceId}`).set('X-Reauth-Token', token).send({ label: 'B', username: 'b', password: 'b' }).expect(201);
+    expect(a.body.isDefault).toBe(true);
+    expect(b.body.isDefault).toBe(false);
+
+    await agent.patch(`/vault/credentials/${hrServiceId}/${b.body.id}/default`).expect(204);
+    const list = await agent.get(`/vault/credentials/${hrServiceId}`).expect(200);
+    expect(list.body.find((x: any) => x.id === b.body.id).isDefault).toBe(true);
+    expect(list.body.find((x: any) => x.id === a.body.id).isDefault).toBe(false);
+  });
 });

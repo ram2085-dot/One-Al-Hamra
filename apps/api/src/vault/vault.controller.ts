@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Headers, Param, Post, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, HttpCode, Param, Patch, Post, UnauthorizedException } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CreateCredentialDto } from './dto/create-credential.dto';
+import { UpdateCredentialDto } from './dto/update-credential.dto';
 import { ReauthDto } from './dto/reauth.dto';
 import { ReauthTokenStore } from './reauth-token.store';
 import { VaultService } from './vault.service';
@@ -38,5 +39,41 @@ export class VaultController {
   ) {
     this.requireReauth(reauthToken, user.id, serviceId);
     return this.vault.createCredential(user, serviceId, dto);
+  }
+
+  // Declared before @Patch(':serviceId/:credentialId') so the literal `default`
+  // segment wins over the :credentialId param.
+  @Patch(':serviceId/:credentialId/default')
+  @HttpCode(204)
+  async makeDefault(
+    @CurrentUser() user: User,
+    @Param('serviceId') serviceId: string,
+    @Param('credentialId') credentialId: string,
+  ) {
+    await this.vault.setDefault(user, serviceId, credentialId);
+  }
+
+  @Patch(':serviceId/:credentialId')
+  update(
+    @CurrentUser() user: User,
+    @Param('serviceId') serviceId: string,
+    @Param('credentialId') credentialId: string,
+    @Headers('x-reauth-token') reauthToken: string | undefined,
+    @Body() dto: UpdateCredentialDto,
+  ) {
+    this.requireReauth(reauthToken, user.id, serviceId);
+    return this.vault.updateCredential(user, serviceId, credentialId, dto);
+  }
+
+  @Delete(':serviceId/:credentialId')
+  @HttpCode(204)
+  async remove(
+    @CurrentUser() user: User,
+    @Param('serviceId') serviceId: string,
+    @Param('credentialId') credentialId: string,
+    @Headers('x-reauth-token') reauthToken: string | undefined,
+  ) {
+    this.requireReauth(reauthToken, user.id, serviceId);
+    await this.vault.deleteCredential(user, serviceId, credentialId);
   }
 }

@@ -73,4 +73,39 @@ describe('VaultService — credentials', () => {
     await service.createCredential(user, 's1', { username: 'x', password: 'y' });
     expect(prisma.credential.create.mock.calls[0][0].data.isDefault).toBe(false);
   });
+
+  it('updateCredential re-encrypts only provided fields and bumps lastRotatedAt when password changes', async () => {
+    prisma.credential.findFirst.mockResolvedValue({ id: 'c1', userId: 'u1', serviceId: 's1', isDefault: true });
+    prisma.credential.update.mockResolvedValue({
+      id: 'c1', label: 'new', encUsername: 'enc(jdoe)', encPassword: 'enc(new-pw)', isDefault: true, lastRotatedAt: new Date(1), passwordExpiresAt: null,
+    });
+    await service.updateCredential(user, 's1', 'c1', { label: 'new', password: 'new-pw' });
+    const data = prisma.credential.update.mock.calls[0][0].data;
+    expect(data.label).toBe('new');
+    expect(data.encPassword).toBe('enc(new-pw)');
+    expect(data.encUsername).toBeUndefined(); // username not provided → not touched
+    expect(data.lastRotatedAt).toBeInstanceOf(Date);
+    expect(audit.record).toHaveBeenCalledWith('u1', 'CREDENTIAL_UPDATE', 's1', expect.objectContaining({ action: 'update' }));
+  });
+
+  it('updateCredential 404s for a credential the user does not own', async () => {
+    prisma.credential.findFirst.mockResolvedValue(null);
+    await expect(service.updateCredential(user, 's1', 'nope', { label: 'x' })).rejects.toThrow();
+  });
+
+  it('setDefault runs one transaction: unset others, set this one', async () => {
+    prisma.credential.findFirst.mockResolvedValue({ id: 'c2', userId: 'u1', serviceId: 's1', isDefault: false });
+    await service.setDefault(user, 's1', 'c2');
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.credential.updateMany).toHaveBeenCalledWith({ where: { userId: 'u1', serviceId: 's1' }, data: { isDefault: false } });
+    expect(prisma.credential.update).toHaveBeenCalledWith({ where: { id: 'c2' }, data: { isDefault: true } });
+  });
+
+  it('deleteCredential promotes the oldest remaining credential when the default is removed', async () => {
+    prisma.credential.findFirst.mockResolvedValueOnce({ id: 'c1', userId: 'u1', serviceId: 's1', isDefault: true });
+    prisma.credential.findMany.mockResolvedValueOnce([{ id: 'c2', createdAt: new Date(2) }, { id: 'c3', createdAt: new Date(3) }]);
+    await service.deleteCredential(user, 's1', 'c1');
+    expect(prisma.credential.delete).toHaveBeenCalledWith({ where: { id: 'c1' } });
+    expect(prisma.credential.update).toHaveBeenCalledWith({ where: { id: 'c2' }, data: { isDefault: true } });
+  });
 });
