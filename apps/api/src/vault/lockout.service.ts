@@ -24,9 +24,13 @@ export class LockoutService {
     const row = await this.prisma.credentialVaultLockout.findUnique({
       where: { userId_serviceId: { userId, serviceId } },
     });
-    if (row?.lockedUntil && row.lockedUntil.getTime() > Date.now()) {
+    if (!row?.lockedUntil) return;
+    if (row.lockedUntil.getTime() > Date.now()) {
       throw this.lockedError(Math.round((row.lockedUntil.getTime() - Date.now()) / 1000));
     }
+    // Lock has expired: drop the stale row so the user gets a fresh set of attempts,
+    // rather than re-locking on the next single failure ((5 ?? 0) + 1 >= 5).
+    await this.reset(userId, serviceId);
   }
 
   async recordFailure(userId: string, serviceId: string): Promise<void> {

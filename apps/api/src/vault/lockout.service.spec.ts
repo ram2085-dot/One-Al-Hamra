@@ -38,6 +38,17 @@ describe('LockoutService', () => {
     }
   });
 
+  it('assertNotLocked clears a stale row once lockedUntil is in the past, then resolves', async () => {
+    prisma.credentialVaultLockout.findUnique.mockResolvedValue({
+      userId: 'u1', serviceId: 's1', failedAttempts: 5, lockedUntil: new Date(Date.now() - 60_000),
+    });
+    prisma.credentialVaultLockout.delete.mockResolvedValue({});
+    await expect(service.assertNotLocked('u1', 's1')).resolves.toBeUndefined();
+    expect(prisma.credentialVaultLockout.delete).toHaveBeenCalledWith({
+      where: { userId_serviceId: { userId: 'u1', serviceId: 's1' } },
+    });
+  });
+
   it('recordFailure sets lockedUntil and raises a 423 once failedAttempts reaches 5', async () => {
     prisma.credentialVaultLockout.findUnique.mockResolvedValue({ userId: 'u1', serviceId: 's1', failedAttempts: 4, lockedUntil: null });
     // The 5th failure locks the account, so recordFailure itself raises the 423.
