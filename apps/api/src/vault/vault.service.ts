@@ -1,9 +1,22 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import type { User } from '@prisma/client';
+import type { Credential, User } from '@prisma/client';
 import { CatalogService } from '../catalog/catalog.service';
+import { AuditService } from '../audit/audit.service';
+import { PrismaService } from '../common/prisma.service';
 import { AdReauthService } from './ad-reauth/ad-reauth.service';
+import { CredentialCryptoService } from './credential-crypto.service';
 import { LockoutService } from './lockout.service';
 import { ReauthTokenStore } from './reauth-token.store';
+import { CreateCredentialDto } from './dto/create-credential.dto';
+
+export interface CredentialListItem {
+  id: string;
+  label: string | null;
+  username: string;
+  isDefault: boolean;
+  lastRotatedAt: Date;
+  passwordExpiresAt: Date | null;
+}
 
 @Injectable()
 export class VaultService {
@@ -12,6 +25,9 @@ export class VaultService {
     private adReauth: AdReauthService,
     private lockout: LockoutService,
     private reauthTokens: ReauthTokenStore,
+    private crypto: CredentialCryptoService,
+    private audit: AuditService,
+    private prisma: PrismaService,
   ) {}
 
   async reauth(user: User, serviceId: string, adPassword: string): Promise<{ reauthToken: string }> {
@@ -26,5 +42,47 @@ export class VaultService {
 
     await this.lockout.reset(user.id, serviceId);
     return { reauthToken: this.reauthTokens.issue({ userId: user.id, serviceId }) };
+  }
+
+  private toListItem(row: Credential): CredentialListItem {
+    return {
+      id: row.id,
+      label: row.label,
+      username: this.crypto.decrypt(row.encUsername),
+      isDefault: row.isDefault,
+      lastRotatedAt: row.lastRotatedAt,
+      passwordExpiresAt: row.passwordExpiresAt,
+    };
+  }
+
+  async listForService(user: User, serviceId: string): Promise<CredentialListItem[]> {
+    await this.catalog.assertEntitled(user, serviceId);
+    const rows = await this.prisma.credential.findMany({
+      where: { userId: user.id, serviceId },
+      orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+    });
+    return rows.map((r) => this.toListItem(r));
+  }
+
+  async createCredential(user: User, serviceId: string, dto: CreateCredentialDto): Promise<CredentialListItem> {
+    await this.catalog.assertEntitled(user, serviceId);
+    const existing = await this.prisma.credential.findMany({
+      where: { userId: user.id, serviceId },
+      select: { id: true },
+    });
+    const isDefault = existing.length === 0;
+    const row = await this.prisma.credential.create({
+      data: {
+        userId: user.id,
+        serviceId,
+        label: dto.label ?? null,
+        encUsername: this.crypto.encrypt(dto.username),
+        encPassword: this.crypto.encrypt(dto.password),
+        isDefault,
+        passwordExpiresAt: dto.passwordExpiresAt ? new Date(dto.passwordExpiresAt) : null,
+      },
+    });
+    await this.audit.record(user.id, 'CREDENTIAL_UPDATE', serviceId, { action: 'create', credentialId: row.id });
+    return this.toListItem(row);
   }
 }
