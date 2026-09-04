@@ -1,31 +1,41 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["public", "vault"]
 }
 
 enum Role {
   EMPLOYEE
   ADMIN
+
+  @@schema("public")
 }
 
 enum LaunchType {
   SSO
   CREDENTIAL
+
+  @@schema("public")
 }
 
 enum ServiceStatus {
   ACTIVE
   INACTIVE
   RETIRED
+
+  @@schema("public")
 }
 
 enum SsoTargetApp {
   DEMO_APP_A
   DEMO_APP_B
+
+  @@schema("public")
 }
 
 model User {
@@ -38,6 +48,8 @@ model User {
   createdAt      DateTime  @default(now())
   ownedServices  Service[] @relation("ServiceOwner")
   favorites      Favorite[]
+
+  @@schema("public")
 }
 
 model Service {
@@ -62,6 +74,8 @@ model Service {
   aliases        ServiceAlias[]
   entitlements   ServiceEntitlement[]
   favorites      Favorite[]
+
+  @@schema("public")
 }
 
 model ServiceAlias {
@@ -71,6 +85,7 @@ model ServiceAlias {
   alias     String
 
   @@index([serviceId])
+  @@schema("public")
 }
 
 model ServiceEntitlement {
@@ -82,6 +97,7 @@ model ServiceEntitlement {
   group      String?
 
   @@index([serviceId])
+  @@schema("public")
 }
 
 model Favorite {
@@ -91,6 +107,7 @@ model Favorite {
   service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@id([userId, serviceId])
+  @@schema("public")
 }
 
 model AuditLog {
@@ -103,4 +120,40 @@ model AuditLog {
 
   @@index([userId])
   @@index([serviceId])
+  @@schema("public")
+}
+
+model Credential {
+  id                String    @id @default(uuid())
+  userId            String
+  serviceId         String
+  label             String?
+  encUsername       String
+  encPassword       String
+  isDefault         Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  lastRotatedAt     DateTime  @default(now())
+  passwordExpiresAt DateTime?
+
+  @@index([userId, serviceId])
+  @@schema("vault")
+}
+
+model AdAccount {
+  adUsername   String @id
+  passwordHash String
+
+  @@schema("vault")
+}
+
+model CredentialVaultLockout {
+  userId         String
+  serviceId      String
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime?
+  updatedAt      DateTime  @updatedAt
+
+  @@id([userId, serviceId])
+  @@schema("vault")
 }

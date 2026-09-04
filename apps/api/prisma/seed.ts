@@ -1,4 +1,5 @@
 import { PrismaClient, Role, LaunchType } from '@prisma/client';
+import { hashPassword } from '../src/vault/ad-reauth/password-hash';
 
 const prisma = new PrismaClient();
 
@@ -9,6 +10,11 @@ async function main() {
   await prisma.auditLog.deleteMany();
   await prisma.service.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.adAccount.deleteMany();
+  // vault schema has no cross-schema FKs, so these are not cascaded by the deletes above — clear
+  // them explicitly or every re-seed permanently orphans all stored credentials / lockout rows.
+  await prisma.credential.deleteMany();
+  await prisma.credentialVaultLockout.deleteMany();
 
   const admin = await prisma.user.create({
     data: {
@@ -39,6 +45,11 @@ async function main() {
       adUsername: 'eng',
     },
   });
+
+  const adPassword = process.env.AD_DEV_PASSWORD ?? 'dev-ad-password';
+  for (const adUsername of [admin.adUsername, financeEmployee.adUsername, engEmployee.adUsername]) {
+    await prisma.adAccount.create({ data: { adUsername, passwordHash: hashPassword(adPassword) } });
+  }
 
   const expenseSystem = await prisma.service.create({
     data: {

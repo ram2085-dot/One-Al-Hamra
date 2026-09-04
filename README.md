@@ -4,12 +4,19 @@ Internal Service Catalog & SSO Portal. See `Plan.md` and `docs/specs/phase-1-cor
 
 ## Run locally (dev, hot reload)
 1. `npm run db:up`
-2. `cd apps/api && cp ../../.env.example .env && npm install && npx prisma migrate dev && npx prisma db seed && npm run start:dev`
+2. `cd apps/api && cp .env.example .env && npm install && npx prisma migrate dev && npx prisma db seed && npm run start:dev`
 3. `cd apps/web && npm install && npm run dev`
 4. `cd apps/mock-idp && cp .env.example .env && npm install && npm run start:dev`
 5. `cd apps/mock-target-apps/demo-app-a && cp .env.example .env && npm install && npm run start:dev`
 6. `cd apps/mock-target-apps/demo-app-b && cp .env.example .env && npm install && npm run start:dev`
-7. Open http://localhost:5173, click "Sign in with SSO," and pick a user (e.g. `admin@launchpad.local` for ADMIN, or `finance.employee@launchpad.local` / `eng.employee@launchpad.local` for EMPLOYEE) from the mock IdP's one-click picker at `localhost:4000`.
+7. `cd apps/mock-target-apps/legacy-demo-app && cp .env.example .env && npm install && npm run start:dev`
+8. Open http://localhost:5173, click "Sign in with SSO," and pick a user (e.g. `admin@launchpad.local` for ADMIN, or `finance.employee@launchpad.local` / `eng.employee@launchpad.local` for EMPLOYEE) from the mock IdP's one-click picker at `localhost:4000`.
+
+### Phase 3 — Credential vault (dev-only secrets)
+
+- `CREDENTIAL_VAULT_KEY` — 32-byte hex, AES-256-GCM key for credentials at rest. The committed value is all-zeros: replace it in any shared environment (`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`).
+- `AD_DEV_PASSWORD` — the single password every seeded mock-AD account accepts for the re-auth step (default `dev-ad-password`).
+- `legacy-demo-app` (port 4003) is the credential-assisted launch target; it accepts `hruser` / `hr-pw-123`. Store exactly those as your credential for "HR Self-Service Portal" to see a successful launch; store anything else to see the FR-17 "this credential didn't work" recovery banner.
 
 ## Run via Docker Compose (full stack)
 1. `docker compose up --build -d`
