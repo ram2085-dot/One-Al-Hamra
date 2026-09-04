@@ -1,7 +1,7 @@
 {
   "name": "enterprise-launchpad",
   "private": true,
-  "workspaces": ["apps/api", "apps/web", "apps/mock-idp", "apps/mock-target-apps/demo-app-a", "apps/mock-target-apps/demo-app-b"],
+  "workspaces": ["apps/api", "apps/web", "apps/mock-idp", "apps/mock-target-apps/demo-app-a", "apps/mock-target-apps/demo-app-b", "apps/mock-target-apps/legacy-demo-app"],
   "scripts": {
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
