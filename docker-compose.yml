@@ -30,6 +30,10 @@ services:
       WEB_BASE_URL: "http://localhost:5173"
       DEMO_APP_A_URL: "http://localhost:4001/login"
       DEMO_APP_B_URL: "http://localhost:4002/login"
+      CREDENTIAL_VAULT_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+      AD_DEV_PASSWORD: "dev-ad-password"
+      LEGACY_APP_LOGIN_URL: "http://localhost:4003/login"
+      API_BASE_URL: "http://localhost:3001"
     ports:
       - "3001:3001"
     depends_on:
@@ -96,6 +100,20 @@ services:
       - "4002:4002"
     depends_on:
       - mock-idp
+
+  legacy-demo-app:
+    build:
+      context: .
+      dockerfile: apps/mock-target-apps/legacy-demo-app/Dockerfile
+    environment:
+      PORT: 4003
+      APP_NAME: "Legacy HR App"
+      WEB_BASE_URL: "http://localhost:5173"
+      LEGACY_EXPECTED_USERNAME: "hruser"
+      LEGACY_EXPECTED_PASSWORD: "hr-pw-123"
+      SESSION_SECRET: "dev-only-legacy-demo-app-session-secret"
+    ports:
+      - "4003:4003"
 
 volumes:
   pgdata:
