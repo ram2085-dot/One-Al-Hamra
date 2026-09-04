@@ -73,6 +73,7 @@ export const strings = {
   vaultLabelField: 'Label (optional)',
   vaultUsernameField: 'Username',
   vaultPasswordField: 'Password',
+  vaultPasswordKeepHint: 'Leave blank to keep the current password.',
   vaultExpiryField: 'Password expires (optional)',
   vaultSaveButton: 'Save',
   vaultCancelButton: 'Cancel',

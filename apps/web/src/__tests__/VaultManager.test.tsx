@@ -22,10 +22,14 @@ function renderAt(url: string) {
 // Radix Dialog mounts a focus-scope / dismissable-layer whose effects settle asynchronously, so every
 // interaction that opens or drives the modal is wrapped in act() to keep those state updates — ours
 // and Radix's — inside the act scope and the console output clean (mirrors ReauthModal.test.tsx).
+// A macrotask tick drains every queued microtask (the modal's reauth POST, then the gated call, then
+// the refetch and its state updates) so they all settle inside the surrounding act() scope.
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 async function actClick(el: HTMLElement) {
   await act(async () => {
     await userEvent.click(el);
-    await Promise.resolve();
+    await settle();
   });
 }
 
@@ -33,7 +37,7 @@ async function reauthAndContinue(value: string) {
   await act(async () => {
     await userEvent.type(screen.getByLabelText(/windows password/i), value);
     await userEvent.click(screen.getByRole('button', { name: /continue/i }));
-    await Promise.resolve();
+    await settle();
   });
 }
 
@@ -82,6 +86,31 @@ it('Reveal requires re-auth: opens the modal, then calls reveal with the returne
   await reauthAndContinue('pw');
   expect(api.get).toHaveBeenLastCalledWith('/vault/credentials/hr1/c1/reveal', { 'X-Reauth-Token': 'tok-9' });
   expect(await screen.findByText('s3cret')).toBeInTheDocument();
+});
+
+it('Edit sends only the changed fields, re-auth-gated, then refetches', async () => {
+  api.get.mockResolvedValueOnce([
+    { id: 'c1', label: 'Personal', username: 'jdoe', isDefault: true, lastRotatedAt: '2026-09-01T00:00:00Z', passwordExpiresAt: null },
+  ]);
+  api.post.mockResolvedValueOnce({ reauthToken: 'tok-e' }); // the modal's reauth POST
+  api.patch.mockResolvedValueOnce(undefined); // the edit PATCH
+  api.get.mockResolvedValueOnce([
+    { id: 'c1', label: 'Work', username: 'jdoe', isDefault: true, lastRotatedAt: '2026-09-01T00:00:00Z', passwordExpiresAt: null },
+  ]); // the refetch
+  renderAt('/services/hr1/credentials');
+  await actClick(await screen.findByRole('button', { name: /^edit$/i }));
+  await act(async () => {
+    const labelField = screen.getByLabelText(/label/i);
+    await userEvent.clear(labelField);
+    await userEvent.type(labelField, 'Work');
+    await settle();
+  });
+  await actClick(screen.getByRole('button', { name: /^save$/i }));
+  await reauthAndContinue('pw');
+  // password field left blank + expiry untouched => body carries only the label
+  expect(api.patch).toHaveBeenCalledWith('/vault/credentials/hr1/c1', { label: 'Work' }, { 'X-Reauth-Token': 'tok-e' });
+  await screen.findByRole('row', { name: /work/i });
+  expect(api.get).toHaveBeenLastCalledWith('/vault/credentials/hr1');
 });
 
 it('has no accessibility violations', async () => {

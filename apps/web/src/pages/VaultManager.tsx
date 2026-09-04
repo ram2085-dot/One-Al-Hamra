@@ -32,6 +32,7 @@ export function VaultManager() {
   const [revealed, setRevealed] = useState<Record<string, { username: string; password: string }>>({});
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editing, setEditing] = useState<CredentialItem | null>(null);
   const [launchFailed, setLaunchFailed] = useState(searchParams.get('credentialLaunchFailed') === '1');
 
   const refetch = useCallback(() => {
@@ -88,6 +89,7 @@ export function VaultManager() {
       }
       if (action.kind !== 'reveal') {
         setShowAddForm(false);
+        setEditing(null);
         refetch();
       }
     } catch (err) {
@@ -169,7 +171,10 @@ export function VaultManager() {
           <p className="text-sm text-gray-600">{strings.vaultNoCredentialsHint}</p>
           <button
             type="button"
-            onClick={() => setShowAddForm(true)}
+            onClick={() => {
+              setEditing(null);
+              setShowAddForm(true);
+            }}
             className="mt-3 rounded bg-ink px-3 py-1.5 text-sm text-white"
           >
             {strings.vaultAddButton}
@@ -253,7 +258,10 @@ export function VaultManager() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setPending({ kind: 'edit', credentialId: c.id, body: {} })}
+                      onClick={() => {
+                        setShowAddForm(false);
+                        setEditing(c);
+                      }}
                       className="underline"
                     >
                       {strings.vaultEditButton}
@@ -282,7 +290,10 @@ export function VaultManager() {
 
           <button
             type="button"
-            onClick={() => setShowAddForm(true)}
+            onClick={() => {
+              setEditing(null);
+              setShowAddForm(true);
+            }}
             className="rounded border border-line px-3 py-1.5 text-sm"
           >
             {strings.vaultAddButton}
@@ -294,6 +305,14 @@ export function VaultManager() {
         <AddCredentialForm
           onCancel={() => setShowAddForm(false)}
           onSubmit={(body) => setPending({ kind: 'add', body })}
+        />
+      )}
+
+      {editing && (
+        <EditCredentialForm
+          credential={editing}
+          onCancel={() => setEditing(null)}
+          onSubmit={(body) => setPending({ kind: 'edit', credentialId: editing.id, body })}
         />
       )}
 
@@ -372,6 +391,102 @@ function AddCredentialForm({
           {strings.vaultCancelButton}
         </button>
         <button type="submit" className="rounded bg-ink px-3 py-1.5 text-sm text-white">
+          {strings.vaultSaveButton}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function toDateInputValue(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+}
+
+function EditCredentialForm({
+  credential,
+  onCancel,
+  onSubmit,
+}: {
+  credential: CredentialItem;
+  onCancel: () => void;
+  onSubmit: (body: Record<string, string>) => void;
+}) {
+  const [label, setLabel] = useState(credential.label ?? '');
+  const [username, setUsername] = useState(credential.username);
+  const [password, setPassword] = useState('');
+  const [expiry, setExpiry] = useState(toDateInputValue(credential.passwordExpiresAt));
+
+  // Send only the fields the user actually changed: an empty password means "keep the current one",
+  // and an unchanged expiry date is omitted so it never burns a re-auth on a no-op PATCH.
+  const changed: Record<string, string> = {};
+  if (label !== (credential.label ?? '')) changed.label = label;
+  if (username !== credential.username) changed.username = username;
+  if (password) changed.password = password;
+  if (expiry) {
+    const iso = new Date(expiry).toISOString();
+    const current = credential.passwordExpiresAt;
+    if (!current || new Date(current).getTime() !== new Date(iso).getTime()) {
+      changed.passwordExpiresAt = iso;
+    }
+  }
+  const nothingChanged = Object.keys(changed).length === 0;
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (nothingChanged) return;
+        onSubmit(changed);
+      }}
+      className="space-y-2 rounded border border-line p-4"
+    >
+      <label className="block text-sm">
+        {strings.vaultLabelField}
+        <input
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          className="mt-1 w-full rounded border border-line p-2"
+        />
+      </label>
+      <label className="block text-sm">
+        {strings.vaultUsernameField}
+        <input
+          required
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className="mt-1 w-full rounded border border-line p-2"
+        />
+      </label>
+      <label className="block text-sm">
+        {strings.vaultPasswordField}
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="mt-1 w-full rounded border border-line p-2"
+        />
+        <span className="mt-1 block text-xs text-gray-500">{strings.vaultPasswordKeepHint}</span>
+      </label>
+      <label className="block text-sm">
+        {strings.vaultExpiryField}
+        <input
+          type="date"
+          value={expiry}
+          onChange={(e) => setExpiry(e.target.value)}
+          className="mt-1 rounded border border-line p-2"
+        />
+      </label>
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancel} className="px-3 py-1.5 text-sm">
+          {strings.vaultCancelButton}
+        </button>
+        <button
+          type="submit"
+          disabled={nothingChanged}
+          className="rounded bg-ink px-3 py-1.5 text-sm text-white disabled:opacity-50"
+        >
           {strings.vaultSaveButton}
         </button>
       </div>
